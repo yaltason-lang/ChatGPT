@@ -27,9 +27,9 @@ function Is-Historical([string]$Path) {
 }
 
 Add-Report 'Riverwood LIVE :8080 Operations capture'
-Add-Report 'CAPTURE TOOL 8080 V1 - PowerShell 5.1 compatible'
+Add-Report 'CAPTURE TOOL 8080 V1 ASCII PS51'
 Add-Report ('Captured at: ' + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))
-Add-Report 'READ-ONLY: this tool does not stop/start/restart/modify any process or source file.'
+Add-Report 'READ ONLY: no process or source file will be modified.'
 Add-Report ''
 
 $listeners = @(Get-NetTCPConnection -State Listen -LocalPort 8080 -ErrorAction SilentlyContinue)
@@ -39,7 +39,7 @@ if ($listeners.Count -eq 0) {
 }
 $pids = @($listeners | Select-Object -ExpandProperty OwningProcess -Unique)
 if ($pids.Count -ne 1) {
-    Add-Report ('FAILED: expected exactly one owning PID for :8080, got: ' + ($pids -join ', '))
+    Add-Report ('FAILED: expected one owning PID for :8080, got: ' + ($pids -join ', '))
     exit 3
 }
 $opsPid = [int]$pids[0]
@@ -56,8 +56,6 @@ Add-Report ''
 
 $candidates = New-Object System.Collections.Generic.List[string]
 $cmd = [string]$proc.CommandLine
-
-# First priority: resolve an accommodation_module.py beside an explicit live Python entrypoint.
 $matches = [regex]::Matches($cmd, '(?i)(?:"([^"]+\.py)"|([^\s"]+\.py))')
 foreach ($m in $matches) {
     $raw = if ($m.Groups[1].Success) { $m.Groups[1].Value } else { $m.Groups[2].Value }
@@ -83,7 +81,6 @@ foreach ($m in $matches) {
     }
 }
 
-# Fallback marker scan in the two known Riverwood live trees. Archives/backups are ignored.
 $roots = @('C:\Riverwood_Operations_MVP0_Core_Employees', 'C:\riverwood_revenue_bot')
 foreach ($root in $roots) {
     if (-not (Test-Path $root)) { continue }
@@ -104,7 +101,7 @@ foreach ($root in $roots) {
 }
 
 if ($candidates.Count -eq 0) {
-    Add-Report 'FAILED: no non-archive accommodation_module.py matched the live :8080 process / Operations markers.'
+    Add-Report 'FAILED: no live accommodation_module.py candidate found.'
     exit 5
 }
 
@@ -124,12 +121,11 @@ foreach ($path in $candidates) {
     Add-Report ('  score=' + $score + '  ' + $path)
 }
 
-# Deliberately simple Windows PowerShell 5.1-compatible sorting.
 $ranked = @($ranked | Sort-Object Path | Sort-Object Score -Descending)
 $topScore = $ranked[0].Score
 $top = @($ranked | Where-Object { $_.Score -eq $topScore })
 if ($top.Count -ne 1) {
-    Add-Report ('FAILED: ambiguous live Operations source at top score ' + $topScore + '. Nothing copied as authoritative.')
+    Add-Report ('FAILED: ambiguous live Operations source at top score ' + $topScore)
     foreach ($item in $top) { Add-Report ('  tied: ' + $item.Path) }
     exit 6
 }
@@ -138,7 +134,7 @@ $source = [string]$top[0].Path
 $sourceDir = Split-Path -Parent $source
 $template = Join-Path $sourceDir 'templates\accommodation_quote_detail.html'
 if (-not (Test-Path $template -PathType Leaf)) {
-    Add-Report ('FAILED: selected source has no sibling templates\accommodation_quote_detail.html: ' + $sourceDir)
+    Add-Report ('FAILED: template missing beside selected module: ' + $template)
     exit 7
 }
 
@@ -146,21 +142,12 @@ Copy-Item -LiteralPath $source -Destination $Target -Force
 Copy-Item -LiteralPath $template -Destination $TargetTemplate -Force
 $hash = (Get-FileHash -LiteralPath $Target -Algorithm SHA256).Hash.ToLowerInvariant()
 $templateHash = (Get-FileHash -LiteralPath $TargetTemplate -Algorithm SHA256).Hash.ToLowerInvariant()
-$text = [System.IO.File]::ReadAllText($source)
-$stateCount = ([regex]::Matches($text, '(?m)^def\s+_hms_booking_state\s*\(')).Count
-$payloadCount = ([regex]::Matches($text, '(?m)^def\s+_hms_booking_payload\s*\(')).Count
-$obsolete = 'Автоматичний запис раннього заїзду/пізнього виїзду в HMS ще не зіставлений з полями GroupCard.'
-$blockerCount = ([regex]::Matches($text, [regex]::Escape($obsolete))).Count
 
 Add-Report ''
 Add-Report ('SELECTED LIVE SOURCE: ' + $source)
-Add-Report ('SELECTED TEMPLATE   : ' + $template)
-Add-Report ('MODULE COPY         : ' + $Target)
-Add-Report ('MODULE SHA256       : ' + $hash)
-Add-Report ('TEMPLATE SHA256     : ' + $templateHash)
-Add-Report ('_hms_booking_state definitions : ' + $stateCount)
-Add-Report ('_hms_booking_payload definitions: ' + $payloadCount)
-Add-Report ('obsolete early/late blocker copies: ' + $blockerCount)
+Add-Report ('SELECTED TEMPLATE: ' + $template)
+Add-Report ('MODULE SHA256: ' + $hash)
+Add-Report ('TEMPLATE SHA256: ' + $templateHash)
 Add-Report ''
 Add-Report 'CAPTURE OK. Attach CAPTURE_REPORT.txt and LIVE_8080_accommodation_module.py to ChatGPT.'
 exit 0
