@@ -1,0 +1,54 @@
+name: Build Riverwood HMS Compatibility v6
+
+on:
+  push:
+    branches:
+      - riverwood-hms-compatibility-v6
+    paths-ignore:
+      - 'release/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build dependencies
+        run: python -m pip install --upgrade pip jinja2
+
+      - name: Build and test v6
+        run: python build_v6.py
+
+      - name: Verify writer and sidecar sources untouched
+        run: git diff --exit-code -- pms_booking_adapter_v1.py pms_sidecar_with_room_quote_v3.py
+
+      - name: Upload verified ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Riverwood_5SEP_HMS_COMPATIBILITY_CAPACITY_RULE_FIX_v6
+          path: dist/Riverwood_5SEP_HMS_COMPATIBILITY_CAPACITY_RULE_FIX_v6.zip
+          if-no-files-found: error
+
+      - name: Publish verified ZIP in release folder
+        run: |
+          mkdir -p release
+          cp dist/Riverwood_5SEP_HMS_COMPATIBILITY_CAPACITY_RULE_FIX_v6.zip release/Riverwood_5SEP_HMS_COMPATIBILITY_CAPACITY_RULE_FIX_v6.zip
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release/Riverwood_5SEP_HMS_COMPATIBILITY_CAPACITY_RULE_FIX_v6.zip
+          if git diff --cached --quiet; then
+            echo "Verified ZIP already current"
+          else
+            git commit -m "Publish verified HMS compatibility v6 ZIP [skip ci]"
+            git push
+          fi
