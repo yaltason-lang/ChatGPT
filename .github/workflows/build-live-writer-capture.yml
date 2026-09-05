@@ -1,0 +1,52 @@
+name: Build Riverwood LIVE 8085 Writer Capture Tool
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'tools/**'
+      - '.github/workflows/build-live-writer-capture.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify capture is read-only
+        run: |
+          grep -q "Get-NetTCPConnection" tools/capture_live_8085_writer.ps1
+          grep -q "Copy-Item" tools/capture_live_8085_writer.ps1
+          ! grep -Eiq "Stop-Process|Restart-Service|Stop-Service|Start-Service|taskkill|TerminateProcess" tools/capture_live_8085_writer.ps1
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          zip -j dist/Riverwood_CAPTURE_LIVE_8085_WRITER.zip tools/CAPTURE_LIVE_8085_WRITER.bat tools/capture_live_8085_writer.ps1
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Riverwood_CAPTURE_LIVE_8085_WRITER
+          path: dist/Riverwood_CAPTURE_LIVE_8085_WRITER.zip
+          if-no-files-found: error
+
+      - name: Publish release copy
+        run: |
+          mkdir -p release
+          cp dist/Riverwood_CAPTURE_LIVE_8085_WRITER.zip release/Riverwood_CAPTURE_LIVE_8085_WRITER.zip
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release/Riverwood_CAPTURE_LIVE_8085_WRITER.zip
+          if git diff --cached --quiet; then
+            echo "Capture ZIP already current"
+          else
+            git commit -m "Publish live 8085 writer capture tool [skip ci]"
+            git push
+          fi
