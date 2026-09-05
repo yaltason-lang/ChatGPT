@@ -1,4 +1,4 @@
-name: Build Riverwood LIVE 8085 Writer Capture Tool
+name: Build Riverwood LIVE 8085 Writer Capture Tool V2
 
 on:
   push:
@@ -14,39 +14,58 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify capture is read-only
+      - name: Verify capture v2 source and PowerShell syntax
+        shell: powershell
         run: |
-          grep -q "Get-NetTCPConnection" tools/capture_live_8085_writer.ps1
-          grep -q "Copy-Item" tools/capture_live_8085_writer.ps1
-          ! grep -Eiq "Stop-Process|Restart-Service|Stop-Service|Start-Service|taskkill|TerminateProcess" tools/capture_live_8085_writer.ps1
+          if (-not (Select-String -Path tools\capture_live_8085_writer_v2.ps1 -SimpleMatch 'CAPTURE TOOL V2')) { throw 'V2 marker missing' }
+          if (Select-String -Path tools\capture_live_8085_writer_v2.ps1 -SimpleMatch 'Sort-Object Score -Descending, Path') { throw 'Old broken sort syntax still present' }
+          if (-not (Select-String -Path tools\capture_live_8085_writer_v2.ps1 -SimpleMatch 'Sort-Object Path | Sort-Object Score -Descending')) { throw 'Expected PS5.1 sort missing' }
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'tools\capture_live_8085_writer_v2.ps1'), [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Host; throw 'PowerShell parser errors found' }
+          $text = Get-Content tools\capture_live_8085_writer_v2.ps1 -Raw
+          foreach ($bad in @('Stop-Process','Restart-Service','Stop-Service','Start-Service','taskkill','TerminateProcess')) {
+            if ($text -match [regex]::Escape($bad)) { throw ('Unsafe token found: ' + $bad) }
+          }
 
-      - name: Package
+      - name: Package V2 with unique filename
+        shell: powershell
         run: |
-          mkdir -p dist
-          zip -j dist/Riverwood_CAPTURE_LIVE_8085_WRITER.zip tools/CAPTURE_LIVE_8085_WRITER.bat tools/capture_live_8085_writer.ps1
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          Compress-Archive -Path tools\CAPTURE_LIVE_8085_WRITER_V2.bat,tools\capture_live_8085_writer_v2.ps1 -DestinationPath dist\Riverwood_CAPTURE_LIVE_8085_WRITER_V2_PS51.zip -Force
+          $tmp = Join-Path $env:RUNNER_TEMP 'capture-check'
+          Expand-Archive -Path dist\Riverwood_CAPTURE_LIVE_8085_WRITER_V2_PS51.zip -DestinationPath $tmp -Force
+          $packed = Get-Content (Join-Path $tmp 'capture_live_8085_writer_v2.ps1') -Raw
+          if ($packed -notmatch 'CAPTURE TOOL V2') { throw 'Packed ZIP does not contain V2 marker' }
+          if ($packed -match 'Sort-Object Score -Descending, Path') { throw 'Packed ZIP contains old broken syntax' }
+          if ($packed -notmatch 'Sort-Object Path \| Sort-Object Score -Descending') { throw 'Packed ZIP missing fixed sort' }
+          Get-FileHash dist\Riverwood_CAPTURE_LIVE_8085_WRITER_V2_PS51.zip -Algorithm SHA256 | Format-List
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Riverwood_CAPTURE_LIVE_8085_WRITER
-          path: dist/Riverwood_CAPTURE_LIVE_8085_WRITER.zip
+          name: Riverwood_CAPTURE_LIVE_8085_WRITER_V2_PS51
+          path: dist/Riverwood_CAPTURE_LIVE_8085_WRITER_V2_PS51.zip
           if-no-files-found: error
 
-      - name: Publish release copy
+      - name: Publish unique release copy
+        shell: powershell
         run: |
-          mkdir -p release
-          cp dist/Riverwood_CAPTURE_LIVE_8085_WRITER.zip release/Riverwood_CAPTURE_LIVE_8085_WRITER.zip
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Copy-Item dist\Riverwood_CAPTURE_LIVE_8085_WRITER_V2_PS51.zip release\Riverwood_CAPTURE_LIVE_8085_WRITER_V2_PS51.zip -Force
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add release/Riverwood_CAPTURE_LIVE_8085_WRITER.zip
-          if git diff --cached --quiet; then
-            echo "Capture ZIP already current"
-          else
-            git commit -m "Publish live 8085 writer capture tool [skip ci]"
+          git add release/Riverwood_CAPTURE_LIVE_8085_WRITER_V2_PS51.zip
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "Publish cache-safe live 8085 writer capture v2 [skip ci]"
             git push
-          fi
+          } else {
+            Write-Host "Capture V2 ZIP already current"
+          }
