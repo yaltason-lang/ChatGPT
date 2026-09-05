@@ -1,0 +1,2 @@
+Riverwood HMS compatibility autofix dashboard v2 build workspace.
+Sidecars :8082/:8085 are out of scope and must remain untouched.
