@@ -2,14 +2,24 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import sys
 from pathlib import Path
+
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 
 SRC = Path('accommodation_module.py')
 OUT = Path('EARLYLATE_INSPECTION.txt')
-text = SRC.read_text(encoding='utf-8-sig')
+raw = SRC.read_bytes()
+text = raw.decode('utf-8-sig')
 lines = text.splitlines()
-sha = hashlib.sha256(SRC.read_bytes()).hexdigest()
 tree = ast.parse(text)
+
+sha_raw = hashlib.sha256(raw).hexdigest()
+sha_lf = hashlib.sha256(text.replace('\r\n', '\n').replace('\r', '\n').encode('utf-8')).hexdigest()
+sha_crlf = hashlib.sha256(text.replace('\r\n', '\n').replace('\r', '\n').replace('\n', '\r\n').encode('utf-8')).hexdigest()
 
 wanted_exact = {
     '_stay_time_availability_for_plans',
@@ -20,10 +30,13 @@ wanted_exact = {
 }
 keywords = ('alloc', 'avail', 'room_plan', 'calculator', 'quote_detail', 'hms_booking')
 
-rows = []
-rows.append(f'SHA256={sha}')
-rows.append(f'LINES={len(lines)}')
-rows.append('')
+rows = [
+    f'SHA256_RAW={sha_raw}',
+    f'SHA256_NORMALIZED_LF={sha_lf}',
+    f'SHA256_NORMALIZED_CRLF={sha_crlf}',
+    f'LINES={len(lines)}',
+    '',
+]
 
 funcs = []
 for node in ast.walk(tree):
@@ -63,5 +76,5 @@ for n in funcs:
         rows.append(src)
 
 OUT.write_text('\n'.join(rows) + '\n', encoding='utf-8')
-print('\n'.join(rows[:250]))
+print('\n'.join(rows[:260]))
 print(f'WROTE={OUT}')
