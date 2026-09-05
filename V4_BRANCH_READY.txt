@@ -1,0 +1,2 @@
+Riverwood HMS Compatibility v4 branch ready.
+Full-night swap/permutation autofix build.
