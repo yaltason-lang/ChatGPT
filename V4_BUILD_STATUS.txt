@@ -1,0 +1,3 @@
+Riverwood HMS Compatibility v4
+Full-night swap/permutation autofix regression build.
+No HMS writer/sidecar modifications.
