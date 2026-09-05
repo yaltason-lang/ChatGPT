@@ -1,0 +1,96 @@
+name: Build Riverwood Capture Operations AnyPort V2
+
+on:
+  push:
+    branches:
+      - riverwood-capture-live-operations-anyport-v2
+    paths:
+      - 'tools/capture_live_operations_anyport_v2.ps1'
+      - 'tools/CAPTURE_LIVE_OPERATIONS_ANYPORT_V2.bat'
+      - '.github/workflows/build-capture-operations-anyport-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: riverwood-capture-live-operations-anyport-v2
+
+      - name: Parse PowerShell 5.1 script
+        shell: powershell
+        run: |
+          $path = Join-Path $PWD 'tools\capture_live_operations_anyport_v2.ps1'
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+          Write-Host 'PowerShell parse: PASS'
+
+      - name: Static safety checks
+        shell: powershell
+        run: |
+          $body = Get-Content 'tools\capture_live_operations_anyport_v2.ps1' -Raw
+          if ($body -notmatch 'CAPTURE TOOL ANYPORT V2 ASCII PS51') { throw 'V2 marker missing' }
+          if ($body -match 'Stop-Process|Restart-Service|Stop-Service|Start-Service|taskkill|sc\.exe\s+stop|net\s+stop') { throw 'Forbidden lifecycle command found' }
+          if ($body -match 'LocalPort\s+8080') { throw 'Hard-coded :8080 listener dependency still present' }
+          if ($body -notmatch 'Get-NetTCPConnection -State Listen') { throw 'Listener inventory missing' }
+          if ($body -notmatch 'Get-CimInstance Win32_Process') { throw 'Process inventory missing' }
+          if ($body -notmatch 'CANDIDATES') { throw 'Candidate bundle logic missing' }
+          Write-Host 'Static safety: PASS'
+
+      - name: Build ZIP
+        shell: powershell
+        run: |
+          $name = 'Riverwood_CAPTURE_LIVE_OPERATIONS_ANYPORT_V2'
+          $stage = Join-Path $env:RUNNER_TEMP $name
+          New-Item -ItemType Directory -Path $stage -Force | Out-Null
+          Copy-Item 'tools\capture_live_operations_anyport_v2.ps1' (Join-Path $stage 'capture_live_operations_anyport_v2.ps1')
+          Copy-Item 'tools\CAPTURE_LIVE_OPERATIONS_ANYPORT_V2.bat' (Join-Path $stage 'CAPTURE_LIVE_OPERATIONS_ANYPORT_V2.bat')
+          @'
+          Riverwood Operations live-source capture ANYPORT V2
+          ===================================================
+          READ ONLY. This tool does not modify, stop, start, or restart any process, service, port, tunnel, configuration, or source file.
+
+          It does NOT assume Operations listens on :8080.
+          It inventories listening ports and Python/app processes, reports sanitized Cloudflared ingress hints, and copies every non-historical accommodation_module.py candidate plus its quote-detail template into one capture ZIP.
+
+          Run CAPTURE_LIVE_OPERATIONS_ANYPORT_V2.bat on the Windows host serving staging.
+          After CAPTURE OK, upload the generated CAPTURED_LIVE_OPERATIONS_ANYPORT_V2.zip to ChatGPT.
+          '@ | Set-Content -Path (Join-Path $stage 'README.txt') -Encoding ASCII
+          New-Item -ItemType Directory -Path 'release' -Force | Out-Null
+          $zip = Join-Path $PWD ('release\' + $name + '.zip')
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path $stage -DestinationPath $zip -CompressionLevel Optimal
+          $extract = Join-Path $env:RUNNER_TEMP 'verify_capture_anyport_v2'
+          Expand-Archive -Path $zip -DestinationPath $extract -Force
+          $ps1 = Get-ChildItem -Path $extract -Filter 'capture_live_operations_anyport_v2.ps1' -File -Recurse | Select-Object -First 1
+          $bat = Get-ChildItem -Path $extract -Filter 'CAPTURE_LIVE_OPERATIONS_ANYPORT_V2.bat' -File -Recurse | Select-Object -First 1
+          if (-not $ps1 -or -not $bat) { throw 'Required files missing from ZIP' }
+          $body = Get-Content -LiteralPath $ps1.FullName -Raw
+          if ($body -notmatch 'CAPTURE TOOL ANYPORT V2 ASCII PS51') { throw 'Wrong capture script in ZIP' }
+          if ($body -match 'LocalPort\s+8080') { throw 'ZIP contains hard-coded :8080 capture' }
+          if ($body -match 'Stop-Process|Restart-Service|Stop-Service|Start-Service|taskkill') { throw 'Unsafe lifecycle command in ZIP' }
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          Write-Host ('ZIP SHA256: ' + $hash)
+          $hash | Set-Content -Path 'release\Riverwood_CAPTURE_LIVE_OPERATIONS_ANYPORT_V2.sha256.txt' -Encoding ASCII
+
+      - name: Commit release ZIP
+        shell: powershell
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '4189822+github-actions[bot]@users.noreply.github.com'
+          git add release/Riverwood_CAPTURE_LIVE_OPERATIONS_ANYPORT_V2.zip release/Riverwood_CAPTURE_LIVE_OPERATIONS_ANYPORT_V2.sha256.txt
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host 'Release already current.'
+            exit 0
+          }
+          git commit -m 'Build read-only Operations any-port capture V2'
+          git push origin HEAD:riverwood-capture-live-operations-anyport-v2
