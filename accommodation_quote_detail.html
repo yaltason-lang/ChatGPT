@@ -1,0 +1,368 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+.aq-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px;margin:12px 0}.aq-box{border:1px solid #dbe6f4;border-radius:14px;padding:14px;background:#fff}.aq-box b.big{font-size:24px}.aq-price{font-size:32px;font-weight:850}.aq-price-grid{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:12px;margin-top:12px}.aq-price-item{border:1px solid #dbe6f4;border-radius:12px;padding:12px;background:#fff}.aq-price-item b{font-size:20px}.aq-tax{border-left:4px solid #64748b;background:#f8fafc;padding:12px 14px;border-radius:8px;margin-top:14px}.aq-commercial{border:1px solid #bfdbfe;background:#f8fbff;border-radius:14px;padding:16px}.aq-form{display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-top:16px}.aq-form .field{min-width:160px}.aq-form .grow{flex:1;min-width:260px}.aq-history{font-size:13px}.aq-history td,.aq-history th{padding:7px 9px}.aq-details{border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;background:#fff;margin-top:14px}.aq-details summary{cursor:pointer;font-weight:700}.aq-guest-table input,.aq-guest-table select{min-width:115px}.aq-guest-table .guest-name{min-width:220px}.aq-ok{color:#15803d}.aq-bad{color:#b91c1c}.aq-rate-table th{font-size:12px;color:#64748b;text-transform:uppercase}.aq-rate-sub{font-size:12px;color:#64748b}.aq-rate-total{font-weight:850;white-space:nowrap}.aq-manager{font-size:13px;color:#475569;margin-top:5px}@media(max-width:850px){.aq-grid,.aq-price-grid{grid-template-columns:1fr 1fr}}@media(max-width:600px){.aq-grid,.aq-price-grid{grid-template-columns:1fr}}
+.aq-validity{margin-top:14px;padding:13px 15px;border:1px solid #bcd3e5;border-left:4px solid #06263d;border-radius:10px;background:#f7fbfe;font-size:13px;line-height:1.45}.aq-validity b{display:block;margin-bottom:4px;color:#06263d}.aq-restrictions{margin-top:14px;padding:13px 15px;border:1px solid #fed7aa;border-left:4px solid #c2410c;border-radius:10px;background:#fff7ed;font-size:13px}.aq-restrictions ul{margin:6px 0 0 18px}.aq-terms{margin-top:14px;padding:13px 15px;border:1px solid #f4b7b7;border-left:4px solid #b91c1c;border-radius:10px;background:#fffafa;font-size:13px}.aq-terms ul{margin:6px 0 0 18px}.aq-day-allocation{border:1px solid #dbe6f4;border-radius:12px;padding:12px;margin-top:10px;background:#fbfdff}.aq-room-editor{margin-top:12px;border:2px solid #93c5fd;background:#f8fbff;border-radius:14px;padding:14px}.aq-room-editor h4{margin:0 0 4px}.aq-room-editor-table select{min-width:300px}.aq-room-editor-table input[type=number]{width:78px;min-width:68px}.aq-room-editor-table .lock-select{min-width:118px}.aq-editor-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}.aq-editor-error{margin-top:10px;border:1px solid #fecaca;background:#fff1f2;color:#991b1b;border-radius:10px;padding:10px 12px}.aq-editor-preview{margin-top:12px;border:1px solid #bfdbfe;background:white;border-radius:12px;padding:12px}.aq-editor-preview-grid{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:8px}.aq-editor-preview-grid>div{border:1px solid #e2e8f0;border-radius:9px;padding:9px}.aq-editor-delta.plus{color:#b45309}.aq-editor-delta.minus{color:#15803d}.aq-live-ok{color:#15803d;font-weight:800}.aq-live-bad{color:#b91c1c;font-weight:800}@media(max-width:850px){.aq-room-editor-table select{min-width:220px}.aq-editor-preview-grid{grid-template-columns:1fr 1fr}}
+.aq-timetable{display:none}.aq-timetable.open{display:flex;position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;z-index:2147483000;flex-direction:column;border:0;border-radius:0;background:#fff;overflow:hidden;box-shadow:none}body.aq-board-opened{overflow:hidden!important}.aq-timetable.open .aq-board-scroll{width:100%;max-width:none;overscroll-behavior:contain}.aq-board-head{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:12px 16px;background:#fff;border-bottom:1px solid #e2e8f0;flex:0 0 auto}.aq-board-head b{font-size:17px}.aq-board-head .aq-rate-sub{max-width:900px}.aq-board-toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;flex:0 0 auto}.aq-board-tools-left,.aq-board-tools-right{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.aq-board-toolbar select{min-width:230px;height:34px;padding:5px 9px}.aq-board-toolbar .btn{padding:7px 10px;min-height:34px}.aq-board-range{font-size:12px;color:#64748b;font-weight:700}.aq-board-scroll{overflow:auto;background:#fff;position:relative;flex:1 1 auto;min-height:0}.aq-board-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#64748b;padding:7px 12px;border-bottom:1px solid #eef2f7;background:#fff;position:sticky;top:0;z-index:45}.aq-dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}.aq-board-message{padding:16px}.aq-timeline{position:relative;background:#fff;min-width:max-content}.aq-timeline-head{position:sticky;top:31px;z-index:40;display:grid;background:#f8fafc;border-bottom:1px solid #cbd5e1}.aq-head-room{position:sticky;left:0;z-index:44;background:#f8fafc;padding:6px 10px;font-size:10px;font-weight:850;color:#475569;text-transform:uppercase;border-right:1px solid #cbd5e1;display:flex;align-items:center}.aq-day-head{height:42px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid #e5e7eb;color:#475569;font-size:10px;white-space:nowrap;line-height:1.15}.aq-day-head b{font-size:12px;color:#334155}.aq-day-head.weekend{background:#fbf7f4}.aq-day-head.edit-day{background:#eff6ff;box-shadow:inset 2px 0 #2563eb,inset -2px 0 #2563eb;color:#1d4ed8}.aq-category{border-bottom:1px solid #dbe6f4;background:#f8fafc}.aq-cat-strip{height:29px;display:grid;align-items:stretch;background:#f1f5f9;border-top:1px solid #dbe6f4;border-bottom:1px solid #dbe6f4}.aq-cat-head{position:sticky;left:0;z-index:18;width:100%;border:0;background:#f1f5f9;display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:12px;font-weight:850;color:#1e293b;cursor:pointer;text-align:left;border-right:1px solid #dbe6f4}.aq-cat-head:hover{background:#e8eef5}.aq-cat-rooms.collapsed{display:none}.aq-room-row{display:grid;min-height:34px;border-top:1px solid #f1f5f9;background:#fff}.aq-room-label{position:sticky;left:0;z-index:16;background:#fff;padding:4px 10px;border-right:1px solid #dbe6f4;display:flex;align-items:center;justify-content:space-between;gap:7px;box-shadow:3px 0 7px rgba(15,23,42,.025)}.aq-room-label b{font-size:12px;color:#0f172a;white-space:nowrap}.aq-room-label span{font-size:10px;color:#64748b;white-space:nowrap}.aq-room-track{position:relative;height:34px;background:#fff;overflow:hidden}.aq-day-band{position:absolute;top:0;bottom:0;border-right:1px solid #edf0f3;background:#fff}.aq-day-band.weekend{background:#fdf9f6}.aq-day-band.edit-day{background:#f5f9ff;box-shadow:inset 1px 0 #60a5fa,inset -1px 0 #60a5fa}.aq-bar{position:absolute;top:6px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;padding:0 6px;font-size:10px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid transparent;z-index:6;box-sizing:border-box}.aq-bar.occupied{background:#8dc4c9;color:#173f44;border-color:#6baab1}.aq-bar.blocked{background:#f6c77f;color:#713b00;border-color:#e6aa50}.aq-bar.planned{background:#9fc3f9;color:#174b9b;border-color:#6aa0ee}.aq-bar.conflict{background:#f4a2aa;color:#7f1521;border-color:#dc6f79}.aq-pick-zone{position:absolute;top:0;bottom:0;border:0;background:transparent;z-index:10;cursor:pointer}.aq-pick-zone:hover{background:rgba(37,99,235,.10);box-shadow:inset 0 0 0 2px #2563eb}.aq-board-target-active{outline:2px solid #2563eb;border-radius:10px}.aq-room-pick{margin-top:5px;font-size:11px;padding:5px 8px}.aq-cat-arrow{display:inline-block;width:16px;color:#64748b}.aq-selected-room{background:#eff6ff!important}.aq-selected-room .aq-room-label{background:#eff6ff}.aq-board-close{white-space:nowrap}@media(max-width:800px){.aq-timetable.open{inset:0;border-radius:0}.aq-board-toolbar select{min-width:150px}.aq-board-head .aq-rate-sub{display:none}}
+.aq-booking-card{border:1px solid #bfdbfe;background:#f8fbff}.aq-booking-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.aq-booking-pill{display:inline-flex;align-items:center;border:1px solid #cbd5e1;background:#f8fafc;color:#475569;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:850;letter-spacing:.03em}.aq-booking-pill.ready,.aq-booking-pill.booked{border-color:#86efac;background:#f0fdf4;color:#166534}.aq-booking-pill.blocked{border-color:#fecaca;background:#fff1f2;color:#991b1b}.aq-booking-pill.stale{border-color:#fde68a;background:#fffbeb;color:#92400e}.aq-booking-ok,.aq-booking-bad,.aq-booking-warn,.aq-booking-note{margin-top:12px;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.45}.aq-booking-ok{border:1px solid #bbf7d0;background:#f0fdf4;color:#166534}.aq-booking-bad{border:1px solid #fecaca;background:#fff1f2;color:#991b1b}.aq-booking-warn{border:1px solid #fde68a;background:#fffbeb;color:#92400e}.aq-booking-note{border:1px solid #dbe6f4;background:#fff;color:#475569}.aq-booking-list{margin:8px 0 0 22px;color:#991b1b;font-size:13px}
+.aq-hms-compat{border:2px solid #f59e0b;background:#fffbeb}.aq-hms-compat.ok{border-color:#86efac;background:#f0fdf4}.aq-hms-compat h3{margin:0}.aq-hms-compat-grid{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:10px;margin-top:12px}.aq-hms-compat-item{border:1px solid #fed7aa;background:#fff;border-radius:12px;padding:12px}.aq-hms-compat-seg{margin-top:7px;padding:7px 9px;border-radius:8px;background:#f8fafc}.aq-hms-compat-seg.replace{background:#fff1f2;border:1px solid #fecaca}.aq-hms-compat-preview{margin-top:12px;border:1px solid #93c5fd;background:#eff6ff;border-radius:12px;padding:12px}@media(max-width:800px){.aq-hms-compat-grid{grid-template-columns:1fr}}
+/* RIVERWOOD_HMS_COMPAT_AUTOFIX_V2_UI */
+</style>
+<div class="topbar"><div><h1 class="h1">{{ quote['quote_number'] }}</h1><div class="muted">{{ quote['title'] or 'Пропозиція з проживання' }} · {{ quote['client_name'] or 'гість не вказаний' }} · версія {{ quote['revision_no'] or 1 }}</div><div class="aq-manager">Склав: <b>{{ manager_name }}</b></div></div><div class="actions"><a class="btn" href="{{ url_for('accommodation.quotes_page') }}">← До списку</a>{% if is_current_revision %}<a class="btn primary" href="{{ url_for('accommodation.calculator_page', edit_quote_id=quote['quote_id']) }}">Редагувати та перерахувати</a><a class="btn" target="_blank" href="{{ url_for('accommodation.quote_print', quote_id=quote['quote_id']) }}">Відкрити бланк</a>{% else %}<a class="btn" href="{{ url_for('accommodation.quote_detail', quote_id=quote['quote_id']) }}">Поточна версія {{ current_revision_no }}</a><a class="btn" target="_blank" href="{{ url_for('accommodation.quote_print', quote_id=quote['quote_id'], revision=quote['revision_no']) }}">Бланк цієї версії</a>{% endif %}</div></div>
+{% if not is_current_revision %}<div class="aq-restrictions" style="border-color:#bfdbfe;border-left-color:#2563eb;background:#eff6ff;color:#1e3a8a"><b>Перегляд історичної версії {{ quote['revision_no'] }}</b><div>Це зафіксований стан пропозиції на {{ version_created_at|string|replace('T',' ') }}. Редагування доступне тільки з поточної версії {{ current_revision_no }}.</div></div>{% endif %}
+<div class="aq-grid">
+  <div class="aq-box"><div class="muted">Період</div><b>{{ quote['arrival'] }} — {{ quote['departure'] }}</b><div>{{ quote['nights'] }} ноч.</div></div>
+  <div class="aq-box"><div class="muted">Гостей</div><b class="big">{{ quote['guest_count'] }}</b><div>{% if allocation.daily_mode %}максимум за одну ніч; склад змінюється{% else %}{{ quote['adults'] }} дор. + {{ quote['children'] }} діт.{% endif %}</div></div>
+  <div class="aq-box"><div class="muted">Номерів</div><b class="big">{{ allocation.used_rooms or 0 }}</b><div>{% if allocation.daily_mode %}максимум за одну ніч{% else %}{{ allocation.allocated_capacity or 0 }} місць{% endif %}</div></div>
+  <div class="aq-box"><div class="muted">Результат</div>{% if quote['shortage'] %}<b class="big aq-bad">НЕ ВМІЩАЄМО</b><div>не вистачає {{ quote['shortage'] }}</div>{% else %}<b class="big aq-ok">ВМІЩАЄМО</b><div>резерв {{ quote['spare_places'] }} місць</div>{% endif %}</div>
+</div>
+
+{% if is_current_revision %}
+{% set compat = booking_state.compatibility or {} %}
+{% if not compat.blocking %}
+<div class="card aq-hms-compat ok" id="hms-compatibility">
+  <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap">
+    <div><h3>HMS-сумісність розміщення</h3><div class="muted">Writer plan перевірено до HMS: <b>{{ compat.writer_stays_count or 0 }} stay-карток / {{ compat.slot_budget or 0 }} room slots</b>. Writer v10 підтримує послідовні stay-сегменти через технічний card-budget; реальні totals відновлюються і перевіряються до ReserveGroup.</div></div>
+    <span class="aq-booking-pill ready">OK ДО HMS</span>
+  </div>
+</div>
+{% endif %}
+{% if compat.blocking %}
+<div class="card aq-hms-compat" id="hms-compatibility">
+  <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap">
+    <div><h3>HMS-сумісність розміщення</h3><div class="muted">Writer plan не поміщається в поточний HMS room-slot бюджет: <b>{{ compat.writer_stays_count or 0 }} stay-карток / {{ compat.slot_budget or 0 }} room slots</b>, дефіцит <b>{{ compat.slot_shortage or 0 }}</b>. Причина може бути зміною складу в RoomID, розривом RoomID або заміною фізичних номерів між ночами. Preflight і бронювання заблоковані до усунення розриву.</div></div>
+    <span class="aq-booking-pill blocked">ПОТРІБНЕ ВИПРАВЛЕННЯ</span>
+  </div>
+  <div class="aq-hms-compat-grid">{% for c in compat.conflicts or [] %}<div class="aq-hms-compat-item"><b>№ {{ c.room_label }} · {{ c.category }}</b><div class="aq-rate-sub">RoomID {{ c.room_id }} · замінити ночі: {{ c.replacement_nights|join(', ') }}</div>{% for s in c.segments or [] %}<div class="aq-hms-compat-seg {{ 'replace' if s.needs_replacement else '' }}"><b>{{ s.start_date }} → {{ s.end_date }}</b> · {{ s.adults }} дор. + {{ s.children }} діт.{% if s.paid_children %} · платних дітей {{ s.paid_children }}{% endif %}{% if s.extra_beds %} · дод. місць {{ s.extra_beds }}{% endif %}<div class="aq-rate-sub">{{ 'Треба інший фізичний номер' if s.needs_replacement else 'Залишаємо цей номер' }}</div></div>{% endfor %}</div>{% endfor %}</div>
+  <form method="post" style="margin-top:12px"><input type="hidden" name="detail_action" value="hms_compatibility_autofix_preview"><button class="btn primary" type="submit">Виправити автоматично · capacity-aware repair</button></form>
+  {% if hms_compat_preview %}<div class="aq-hms-compat-preview"><b>Preview · було → стане</b>{% for x in hms_compat_preview.replacements or [] %}<div style="margin-top:8px"><strong>№ {{ x.from_room_label }} → № {{ x.to_room_label }}</strong> · {{ x.start_date }} → {{ x.end_date }} · {{ x.adults }} дор. + {{ x.children }} діт.{% if x.paid_children %} · платних дітей {{ x.paid_children }}{% endif %}{% if x.extra_beds %} · дод. місць {{ x.extra_beds }}{% endif %}</div>{% endfor %}<div style="margin-top:10px"><span class="aq-live-ok">Після замін HMS compatibility: OK · writer stays {{ hms_compat_preview.after.writer_stays_count }} / room slots {{ hms_compat_preview.after.slot_budget }}.</span></div><form method="post" style="margin-top:10px"><input type="hidden" name="detail_action" value="hms_compatibility_autofix_save"><button class="btn primary" type="submit">Зберегти виправлення як нову версію {{ (quote['revision_no'] or 1) + 1 }}</button></form></div>{% endif %}
+</div>
+{% endif %}
+
+<div class="card aq-booking-card">
+  <div class="aq-booking-head">
+    <div>
+      <h3 style="margin:0">Бронювання в HMS</h3>
+      <div class="muted">Одна операція: свіжий live preflight → тимчасова GroupCard → точні фізичні номери → ValidateRoom → ReserveGroup 1/2/3. GroupID фіксується в Operations тільки після завершення бронювання.</div>
+    </div>
+    {% if booking_state.status=='booked' %}<span class="aq-booking-pill booked">ЗАБРОНЬОВАНО В HMS</span>
+    {% elif booking_state.status=='booking_uncertain' %}<span class="aq-booking-pill blocked">ПОТРІБНА РУЧНА ПЕРЕВІРКА HMS</span>
+    {% elif booking_state.status=='ready' and booking_state.can_book %}<span class="aq-booking-pill ready">ГОТОВО ДО БРОНЮВАННЯ</span>
+    {% elif booking_state.status=='ready' %}<span class="aq-booking-pill stale">Є БЛОКЕР АВТОЗАПИСУ</span>
+    {% elif booking_state.status=='blocked' %}<span class="aq-booking-pill blocked">Є КОНФЛІКТИ</span>
+    {% elif booking_state.status=='error' %}<span class="aq-booking-pill blocked">ПОМИЛКА HMS</span>
+    {% elif booking_state.status=='stale' %}<span class="aq-booking-pill stale">ПОТРІБНА НОВА ПЕРЕВІРКА</span>
+    {% else %}<span class="aq-booking-pill">НЕ ПЕРЕВІРЕНО</span>{% endif %}
+  </div>
+
+  {% set pf = booking_state.preflight or {} %}
+  {% if booking_state.status=='booked' %}
+    <div class="aq-booking-ok"><b>{{ booking_state.group_account or ('HMS GroupID ' ~ booking_state.group_id) }}</b>{% if booking_state.booking_created_at %} · {{ (booking_state.booking_created_at|string).replace('T',' ')[:19] }}{% endif %}. Усі три ReserveGroup-кроки завершені.</div>
+  {% elif booking_state.status=='booking_uncertain' %}
+    <div class="aq-booking-bad"><b>Автоматичний повтор заблоковано.</b> Після запуску ReserveGroup результат став невизначеним. {% if booking_state.group_id %}Можливий HMS GroupID {{ booking_state.group_id }}. {% endif %}{{ booking_state.last_error }}</div>
+    <div class="aq-booking-note">Перевірте HMS вручну перед будь-якою повторною дією. Це захист від дубльованого бронювання.</div>
+  {% elif booking_state.status=='ready' %}
+    <div class="aq-booking-ok"><b>Live preflight пройдено.</b> Перевірено {{ pf.checked_windows_count or 0 }} інтервалів · {{ pf.rooms_unique or 0 }} унікальних фізичних номерів{% if booking_state.preflight_at %} · {{ (booking_state.preflight_at|string).replace('T',' ')[:16] }}{% endif %}.</div>
+  {% elif booking_state.status=='blocked' %}
+    <div class="aq-booking-bad"><b>Бронювання заблоковано.</b> HMS шахматка показала {{ pf.conflict_count or 0 }} конфлікт(и).</div>
+    {% if pf.conflicts %}<ul class="aq-booking-list">{% for c in pf.conflicts %}<li>{{ c.message }}</li>{% endfor %}</ul>{% endif %}
+  {% elif booking_state.status=='error' %}
+    <div class="aq-booking-bad"><b>Остання HMS-операція не завершилась.</b> {{ booking_state.last_error }}</div>
+  {% elif booking_state.status=='stale' %}
+    <div class="aq-booking-warn"><b>Пропозиція змінилася після live preflight.</b> Перевірялась версія {{ booking_state.checked_revision }}, зараз версія {{ booking_state.current_revision }}.</div>
+  {% endif %}
+
+  {% if booking_state.legacy_state_ignored and booking_state.legacy_temp_group_id and booking_state.status not in ['booked','booking_uncertain'] %}
+    <div class="aq-booking-note">Старий тимчасовий GroupID {{ booking_state.legacy_temp_group_id }} від попереднього draft-flow ігнорується. Він не є збереженим бронюванням і не буде використаний повторно.</div>
+  {% endif %}
+  {% if booking_state.write_blockers %}
+    <div class="aq-booking-warn"><b>Автоматичний writer поки не запускається для цієї пропозиції:</b>{% for w in booking_state.write_blockers %}<div>• {{ w }}</div>{% endfor %}</div>
+  {% endif %}
+  {% if pf.warnings %}<div class="aq-booking-warn">{% for w in pf.warnings %}<div>{{ w }}</div>{% endfor %}</div>{% endif %}
+  {% if guest_list|length < quote['guest_count'] %}<div class="aq-booking-warn">Список гостей заповнено {{ guest_list|length }} із {{ quote['guest_count'] }}. Це не блокує групове бронювання: HMS-картки створюються за фактичним складом кожного номера; ПІБ можна доповнити окремо.</div>{% endif %}
+
+  <div class="actions" style="margin-top:12px">
+    {% if booking_state.status not in ['booked','booking_uncertain'] %}
+      {% if compat.blocking %}<button class="btn" type="button" disabled title="Спочатку усуньте HMS compatibility conflict">Оновити live preflight</button>{% else %}<form method="post" style="margin:0"><input type="hidden" name="detail_action" value="hms_booking_preflight"><button class="btn" type="submit">{{ 'Оновити live preflight' if booking_state.status in ['ready','blocked','error','stale'] else 'Перевірити перед бронюванням' }}</button></form>{% endif %}
+    {% endif %}
+    {% if booking_state.can_book %}
+      <form method="post" style="margin:0" onsubmit="return confirm('Створити реальне бронювання в HMS за цією версією пропозиції? Operations повторно перевірить номери та виконає ReserveGroup 1/2/3.');"><input type="hidden" name="detail_action" value="hms_booking_reserve"><button class="btn primary" type="submit">Забронювати в HMS</button></form>
+    {% elif booking_state.status=='ready' and booking_state.write_blockers %}
+      <button class="btn" type="button" disabled>Забронювати в HMS</button>
+    {% endif %}
+  </div>
+  <div class="aq-booking-note"><b>v5.322 — one-transaction writer.</b> До першого ReserveGroup sidecar працює fail-closed: будь-яка невідповідність складу, RoomID/номера або ValidateRoom скасовує операцію без підтвердженого бронювання. Після неоднозначного post-Reserve збою автоматичний повтор блокується.</div>
+</div>
+{% endif %}
+
+<div class="card"><h3>Розміщення</h3>{% if allocation.daily_mode %}<div class="muted" style="margin-bottom:8px">Автоматичний підбір можна коригувати вручну по кожній ночі. Operations підтягне актуально вільні фізичні номери, після заміни заново перевірить місткість, додаткові місця, MinStay та ціну.</div>{% for d in allocation.days or [] %}<div class="aq-day-allocation"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><b>{{ d.date_label }} → {{ d.next_date_label }}</b><div class="muted">{{ d.adults }} дор. + {{ d.children }} діт. · {{ d.placement_label }}</div></div><div class="actions"><b>{{ d.used_rooms }} номерів</b>{% if is_current_revision %}<a class="btn" href="{{ url_for('accommodation.quote_detail', quote_id=quote['quote_id'], edit_day=d.date) }}#room-editor-{{ d.date|replace('-','') }}">Змінити номери цього дня</a>{% endif %}</div></div><div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>Категорія</th><th>Номерів</th><th>Місць</th><th>Номери</th></tr></thead><tbody>{% for r in d.rows or [] %}{% if r.allocated_rooms %}<tr><td><b>{{ r.guest_label or r.category }}</b></td><td>{{ r.allocated_rooms }}</td><td>{{ r.allocated_capacity }}</td><td class="muted">{{ (r.room_labels[:r.allocated_rooms] if r.room_labels else r.room_ids[:r.allocated_rooms])|join(', ') }}</td></tr>{% endif %}{% endfor %}</tbody></table></div>
+{% if manual_editor and manual_editor.day_date==d.date %}
+{% set daytoken = d.date|replace('-','') %}
+<div class="aq-room-editor" id="room-editor-{{ daytoken }}">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
+    <div><h4>Ручне редагування · {{ d.date_label }} → {{ d.next_date_label }}</h4><div class="muted">Редагується тільки ця ніч. <b>Склад цієї ночі визначається сумою гостей у рядках номерів.</b> Ранній заїзд доступний тільки для першої ночі та лише якщо цей самий фізичний номер вільний попередньої ночі. Пізній виїзд — тільки для останньої ночі та лише якщо номер вільний наступної ночі.</div></div>
+    <a class="btn" href="{{ url_for('accommodation.quote_detail', quote_id=quote['quote_id']) }}">Закрити редактор</a>
+  </div>
+  {% if manual_editor_error %}<div class="aq-editor-error"><b>Зміни не пройшли перевірку.</b><div>{{ manual_editor_error }}</div></div>{% endif %}
+  {% if manual_editor.missing_rooms %}<div class="aq-editor-error"><b>Є номери, які вже не доступні.</b>{% for m in manual_editor.missing_rooms %}<div>Номер {{ m.room_label }} · {{ m.category }} — виберіть заміну нижче.</div>{% endfor %}</div>{% endif %}
+  {% if manual_editor.is_first_night %}<div class="aq-validity" style="margin-top:10px;border-left-color:#2563eb;background:#eff6ff"><b>Ранній заїзд · 50% тарифу</b>{% if manual_editor.early_checkin_error %}<span class="aq-live-bad">Не вдалося перевірити попередню ніч: {{ manual_editor.early_checkin_error }}</span>{% else %}Доступність кожного номера перевірена на <strong>{{ manual_editor.early_checkin_period }}</strong>. Якщо номер зайнятий попередньої ночі — ранній заїзд для нього недоступний.{% endif %}</div>{% endif %}
+  {% if manual_editor.is_last_night %}<div class="aq-validity" style="margin-top:10px;border-left-color:#2563eb;background:#eff6ff"><b>Пізній виїзд · 50% тарифу</b>{% if manual_editor.late_checkout_error %}<span class="aq-live-bad">Не вдалося перевірити наступну ніч: {{ manual_editor.late_checkout_error }}</span>{% else %}Доступність кожного номера перевірена на <strong>{{ manual_editor.late_checkout_period }}</strong>. Якщо номер уже потрібен новому заїзду — пізній виїзд для нього недоступний.{% endif %}</div>{% endif %}
+  <form method="post" class="aq-room-editor-form" data-day="{{ d.date }}">
+    <input type="hidden" name="manual_day" value="{{ d.date }}">
+    <div class="aq-editor-preview" style="margin-top:10px;background:#f8fafc">
+      <b>Поточний склад цієї ночі:</b> {{ manual_editor.day.adults }} дор. + {{ manual_editor.day.children }} діт.{% if manual_editor.day.paid_children %} · платних дітей {{ manual_editor.day.paid_children }}{% endif %}
+      <div class="aq-rate-sub">У ручному режимі склад ночі синхронізується з рядками нижче.</div>
+    </div>
+    {% if manual_editor.is_first_night or manual_editor.is_last_night %}<div class="aq-editor-actions" style="margin-top:10px">{% if manual_editor.is_first_night and not manual_editor.early_checkin_error %}<button class="btn aq-stay-bulk" data-kind="early" type="button">Ранній заїзд для всіх доступних</button><button class="btn aq-stay-clear" data-kind="early" type="button">Скасувати ранній заїзд</button>{% endif %}{% if manual_editor.is_last_night and not manual_editor.late_checkout_error %}<button class="btn aq-stay-bulk" data-kind="late" type="button">Пізній виїзд для всіх доступних</button><button class="btn aq-stay-clear" data-kind="late" type="button">Скасувати пізній виїзд</button>{% endif %}</div>{% endif %}
+    <div class="table-wrap aq-room-editor-table" style="margin-top:12px"><table><thead><tr><th>Фізичний номер</th><th>Дор.</th><th>Діти</th><th>Платні діти</th><th>Дод. місця</th>{% if manual_editor.is_first_night %}<th>Ранній заїзд</th>{% endif %}{% if manual_editor.is_last_night %}<th>Пізній виїзд</th>{% endif %}<th>Статус</th><th></th></tr></thead><tbody class="aq-editor-rows">
+    {% for rp in manual_editor.current_plan %}
+      {% set live_ids = manual_editor.room_options|map(attribute='room_id')|list %}
+      <tr class="aq-editor-row">
+        <td><select name="dayroom_{{ daytoken }}_room_id" class="aq-editor-room-select">
+          {% if rp.room_id not in live_ids %}<option value="{{ rp.room_id }}" selected data-early="0" data-late="0">№ {{ rp.room_label or rp.room_id }} · зараз недоступний — виберіть заміну</option>{% endif %}
+          {% for o in manual_editor.room_options %}<option value="{{ o.room_id }}" data-early="{{ 1 if o.early_checkin_available else 0 }}" data-late="{{ 1 if o.late_checkout_available else 0 }}" {{ 'selected' if o.room_id==rp.room_id }}>№ {{ o.room_label }} · {{ o.category }} · місткість {{ o.capacity_per_room }}{% if o.portable_standard_bed %} · переносне ліжко{% endif %}</option>{% endfor %}
+        </select><div class="aq-rate-sub">{{ rp.category or '' }}</div></td>
+        <td><input type="number" min="0" name="dayroom_{{ daytoken }}_adults" value="{{ rp.adults or 0 }}"></td>
+        <td><input type="number" min="0" name="dayroom_{{ daytoken }}_children" value="{{ rp.children or 0 }}"></td>
+        <td><input type="number" min="0" name="dayroom_{{ daytoken }}_paid_children" value="{{ rp.paid_children or 0 }}"></td>
+        <td><input type="number" min="0" name="dayroom_{{ daytoken }}_extra_beds" value="{{ rp.extra_beds or 0 }}"></td>
+        {% if manual_editor.is_first_night %}<td><select class="aq-stay-select aq-early-select" name="dayroom_{{ daytoken }}_early_checkin"><option value="0" {{ 'selected' if not rp.early_checkin }}>Ні</option><option value="1" {{ 'selected' if rp.early_checkin and rp.early_checkin_available }} {{ 'disabled' if not rp.early_checkin_available }}>Так · +50%</option></select><div class="aq-rate-sub aq-stay-status" data-kind="early">{{ 'Доступний' if rp.early_checkin_available else 'Недоступний: номер зайнятий попередньої ночі' }}</div></td>{% endif %}
+        {% if manual_editor.is_last_night %}<td><select class="aq-stay-select aq-late-select" name="dayroom_{{ daytoken }}_late_checkout"><option value="0" {{ 'selected' if not rp.late_checkout }}>Ні</option><option value="1" {{ 'selected' if rp.late_checkout and rp.late_checkout_available }} {{ 'disabled' if not rp.late_checkout_available }}>Так · +50%</option></select><div class="aq-rate-sub aq-stay-status" data-kind="late">{{ 'Доступний' if rp.late_checkout_available else 'Недоступний: номер зайнятий наступної ночі' }}</div></td>{% endif %}
+        <td><select class="lock-select" name="dayroom_{{ daytoken }}_locked"><option value="0" {{ 'selected' if not rp.manual_locked }}>Авто</option><option value="1" {{ 'selected' if rp.manual_locked }}>Закріпити</option></select></td>
+        <td><button class="btn aq-editor-remove" type="button">Прибрати</button></td>
+      </tr>
+    {% endfor %}
+    </tbody></table></div>
+    <template class="aq-editor-template"><tr class="aq-editor-row"><td><select name="dayroom_{{ daytoken }}_room_id" class="aq-editor-room-select"><option value="" data-early="0" data-late="0">— виберіть вільний номер —</option>{% for o in manual_editor.room_options %}<option value="{{ o.room_id }}" data-early="{{ 1 if o.early_checkin_available else 0 }}" data-late="{{ 1 if o.late_checkout_available else 0 }}">№ {{ o.room_label }} · {{ o.category }} · місткість {{ o.capacity_per_room }}{% if o.portable_standard_bed %} · переносне ліжко{% endif %}</option>{% endfor %}</select></td><td><input type="number" min="0" name="dayroom_{{ daytoken }}_adults" value="0"></td><td><input type="number" min="0" name="dayroom_{{ daytoken }}_children" value="0"></td><td><input type="number" min="0" name="dayroom_{{ daytoken }}_paid_children" value="0"></td><td><input type="number" min="0" name="dayroom_{{ daytoken }}_extra_beds" value="0"></td>{% if manual_editor.is_first_night %}<td><select class="aq-stay-select aq-early-select" name="dayroom_{{ daytoken }}_early_checkin"><option value="0">Ні</option><option value="1" disabled>Так · +50%</option></select><div class="aq-rate-sub aq-stay-status" data-kind="early">Виберіть номер</div></td>{% endif %}{% if manual_editor.is_last_night %}<td><select class="aq-stay-select aq-late-select" name="dayroom_{{ daytoken }}_late_checkout"><option value="0">Ні</option><option value="1" disabled>Так · +50%</option></select><div class="aq-rate-sub aq-stay-status" data-kind="late">Виберіть номер</div></td>{% endif %}<td><select class="lock-select" name="dayroom_{{ daytoken }}_locked"><option value="0">Авто</option><option value="1">Закріпити</option></select></td><td><button class="btn aq-editor-remove" type="button">Прибрати</button></td></tr></template>
+    <div class="aq-editor-actions">
+      <button class="btn aq-editor-add" type="button">+ Додати номер</button>
+      <button class="btn aq-board-open" type="button">▦ Шахматка номерів</button>
+      <button class="btn" name="detail_action" value="manual_day_preview" type="submit">Перевірити зміни</button>
+      <button class="btn" name="detail_action" value="manual_day_refill" type="submit">Закріпити вибране й автодобрати решту</button>
+      <button class="btn primary" name="detail_action" value="manual_day_save" type="submit">Зберегти як версію {{ manual_editor.next_revision_no }}</button>
+    </div>
+    <script type="application/json" class="rw-timetable-plan">{{ allocation.days|tojson }}</script>
+  </form>
+  {% if manual_preview %}
+  <div class="aq-editor-preview">
+    <b>Результат перевірки</b>
+    <div class="aq-editor-preview-grid" style="margin-top:8px">
+      <div><div class="muted">Базова вартість</div><b>{{ money_fmt(manual_preview.base_total) }} {{ manual_preview.currency }}</b></div>
+      <div><div class="muted">Знижка</div><b>{{ '%.2f'|format(manual_preview.discount_percent or 0) }}%</b></div>
+      <div><div class="muted">Нова вартість для гостя</div><b>{{ money_fmt(manual_preview.commercial_total) }} {{ manual_preview.currency }}</b></div>
+      <div><div class="muted">Різниця до поточної версії</div><b class="aq-editor-delta {{ 'plus' if manual_preview.delta>0 else 'minus' if manual_preview.delta<0 else '' }}">{{ '+' if manual_preview.delta>0 else '' }}{{ money_fmt(manual_preview.delta) }} {{ manual_preview.currency }}</b></div>
+    </div>
+    {% if manual_preview.early_checkin_availability and manual_preview.early_checkin_availability.requested_count %}<div class="aq-validity" style="margin-top:10px;border-left-color:#2563eb;background:#eff6ff"><b>Ранній заїзд</b>{{ manual_preview.early_checkin_availability.available_count }} із {{ manual_preview.early_checkin_availability.requested_count }} номерів · {{ manual_preview.early_checkin_availability.checked_period }} · нараховано <strong>{{ money_fmt(manual_preview.early_checkin_total or 0) }} {{ manual_preview.currency }}</strong>{% if manual_preview.early_checkin_availability.unavailable_room_labels %}. Недоступні: № {{ manual_preview.early_checkin_availability.unavailable_room_labels|join(', ') }}{% endif %}</div>{% endif %}
+    {% if manual_preview.late_checkout_availability and manual_preview.late_checkout_availability.requested_count %}<div class="aq-validity" style="margin-top:10px;border-left-color:#2563eb;background:#eff6ff"><b>Пізній виїзд</b>{{ manual_preview.late_checkout_availability.available_count }} із {{ manual_preview.late_checkout_availability.requested_count }} номерів · {{ manual_preview.late_checkout_availability.checked_period }} · нараховано <strong>{{ money_fmt(manual_preview.late_checkout_total or 0) }} {{ manual_preview.currency }}</strong>{% if manual_preview.late_checkout_availability.unavailable_room_labels %}. Недоступні: № {{ manual_preview.late_checkout_availability.unavailable_room_labels|join(', ') }}{% endif %}</div>{% endif %}
+    {% if manual_preview.composition_changed %}
+    <div class="aq-validity" style="margin-top:10px;border-left-color:#2563eb;background:#eff6ff">
+      <b>Склад цієї ночі буде оновлено автоматично</b>
+      Було: <strong>{{ manual_preview.old_adults }} дор. + {{ manual_preview.old_children }} діт.</strong>{% if manual_preview.old_paid_children %} · платних дітей {{ manual_preview.old_paid_children }}{% endif %}.
+      Стало: <strong>{{ manual_preview.new_adults }} дор. + {{ manual_preview.new_children }} діт.</strong>{% if manual_preview.new_paid_children %} · платних дітей {{ manual_preview.new_paid_children }}{% endif %}.
+    </div>
+    {% endif %}
+    <div style="margin-top:10px">{% if manual_preview.booking_allowed %}<span class="aq-live-ok">Усі умови виконані. Можна зберігати нову версію.</span>{% else %}<span class="aq-live-bad">Зберегти не можна — є блокуючі умови бронювання.</span>{% endif %}</div>
+    {% if manual_preview.hms_compatibility and manual_preview.hms_compatibility.blocking %}<div class="aq-editor-error"><b>HMS compatibility conflict після цієї ручної зміни.</b>{% for c in manual_preview.hms_compatibility.conflicts or [] %}<div>№ {{ c.room_label }} · замінити ночі: {{ c.replacement_nights|join(', ') }}</div>{% endfor %}</div>{% elif manual_preview.hms_compatibility %}<div class="aq-validity" style="border-left-color:#15803d;background:#f0fdf4"><b>HMS compatibility</b>OK — ручна зміна не створює composition stay-split.</div>{% endif %}
+    {% if manual_preview.booking_restrictions %}<div class="aq-restrictions" style="margin-top:10px"><b>Що саме перевірено</b><ul>{% for r in manual_preview.booking_restrictions %}<li>{{ r.message }}</li>{% endfor %}</ul></div>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+</div>{% endfor %}{% else %}<div class="table-wrap"><table><thead><tr><th>Категорія</th><th>Номерів</th><th>Місць</th><th>Номери</th></tr></thead><tbody>{% for r in allocation.rows or [] %}{% if r.allocated_rooms %}<tr><td><b>{{ r.guest_label or r.category }}</b></td><td>{{ r.allocated_rooms }}</td><td>{{ r.allocated_capacity }}</td><td class="muted">{{ (r.room_labels[:r.allocated_rooms] if r.room_labels else r.room_ids[:r.allocated_rooms])|join(', ') }}</td></tr>{% endif %}{% endfor %}</tbody></table></div>{% endif %}</div>
+
+{% if pricing_daily and pricing_daily.days %}
+<div class="card"><h3>Вартість по днях</h3>{% for day in pricing_daily.days %}<div style="margin-top:14px"><div style="display:flex;justify-content:space-between;gap:12px"><div><b>{{ day.date_label }} → {{ day.next_date_label }}</b>{% set dm = daily_plan[loop.index0] if daily_plan and loop.index0 < (daily_plan|length) else none %}{% if day.guest_count is defined %}<div class="aq-rate-sub">{{ day.adults }} дор. + {{ day.children }} діт.{% if day.placement_label %} · {{ day.placement_label }}{% endif %}</div>{% elif dm %}<div class="aq-rate-sub">{{ dm.adults }} дор. + {{ dm.children }} діт. · {{ placement_labels.get(dm.placement_mode,dm.placement_mode) }}</div>{% endif %}</div><b>{{ money_fmt(day.total) }} {{ pricing_daily.currency }}</b></div><div class="table-wrap" style="margin-top:7px"><table class="aq-rate-table"><thead><tr><th>Категорія</th><th>Номерів</th><th>Гостей</th><th>Ціна номера</th><th>Сума</th></tr></thead><tbody>{% for line in day.lines %}<tr><td><b>{{ line.category }}</b>{% if line.room_labels %}<div class="aq-rate-sub">Номери: {{ line.room_labels|join(', ') }}</div>{% endif %}<div class="aq-rate-sub">Основне проживання: {{ line.rooms }} × {{ money_fmt(line.room_rate) }} = <b>{{ money_fmt(line.base_total) }} {{ pricing_daily.currency }}</b></div>{% for x in line.extra_summary or [] %}<div class="aq-rate-sub"><b>{{ x.label }}</b>{% if x.room_labels %} · № {{ x.room_labels|join(', ') }}{% endif %}{% if x.total is not none %} · <b>{{ x.quantity or 1 }} шт.</b>{% if x.unit_amount is not none %} × <b>{{ money_fmt(x.unit_amount) }} {{ pricing_daily.currency }}</b>{% endif %} = <b>{{ money_fmt(x.total) }} {{ pricing_daily.currency }}</b>{% else %} · {{ x.quantity or 1 }} шт. · без окремого нарахування{% endif %}</div>{% endfor %}{% if line.extra_total %}<div class="aq-rate-sub"><b>Разом додаткові нарахування: {{ money_fmt(line.extra_total) }} {{ pricing_daily.currency }}</b></div>{% endif %}</td><td>{{ line.rooms }}</td><td>{{ line.guests }}</td><td><b>{{ money_fmt(line.room_rate) }} {{ pricing_daily.currency }}</b><div class="aq-rate-sub">базовий тариф</div></td><td class="aq-rate-total">{{ money_fmt(line.total) }} {{ pricing_daily.currency }}<div class="aq-rate-sub">разом</div></td></tr>{% endfor %}</tbody></table></div></div>{% endfor %}{% if pricing_daily.period_extras %}<div style="margin-top:14px"><b>Додаткове розміщення та послуги за весь період</b>{% for x in pricing_daily.period_extras %}<div class="aq-rate-sub">{{ x.category }}{% if x.room_label %} · номер {{ x.room_label }}{% endif %}: {{ x.label }}{% if x.amount is not none %} · {{ money_fmt(x.amount) }} {{ pricing_daily.currency }}{% endif %}</div>{% endfor %}</div>{% endif %}</div>
+{% elif pricing_breakdown %}
+<div class="card"><h3>Вартість по категоріях</h3><div class="table-wrap"><table class="aq-rate-table"><thead><tr><th>Категорія</th><th>Номерів</th><th>Гостей</th><th>Вартість номера</th><th>Ночей</th><th>Сума</th></tr></thead><tbody>{% for cat in pricing_breakdown %}{% for line in cat.lines %}<tr><td><b>{{ cat.category }}</b></td><td>{{ line.rooms }}</td><td>{{ line.guests }}</td><td>{% if line.uniform_rate is not none %}<b>{{ money_fmt(line.uniform_rate) }} {{ cat.currency }}</b>{% elif line.per_room_stay_total is not none %}<b>{{ money_fmt(line.per_room_stay_total) }} {{ cat.currency }}</b><div class="aq-rate-sub">за весь період; деталізація за днями не була зафіксована</div>{% else %}—{% endif %}</td><td>{{ line.nights }}</td><td class="aq-rate-total">{{ money_fmt(line.total) }} {{ cat.currency }}</td></tr>{% endfor %}{% endfor %}</tbody></table></div></div>
+{% endif %}
+
+{% if pricing and pricing.booking_restrictions %}<div class="aq-restrictions"><b>Умови бронювання</b><ul>{% for r in pricing.booking_restrictions %}<li>{{ r.message }}{% if r.affected_segments and r.blocking %}<div class="aq-rate-sub" style="margin-top:4px">{% for seg in r.affected_segments %}<div>• {{ seg.category }}{% if seg.room_label %} · номер {{ seg.room_label }}{% endif %}: {{ seg.arrival }} → {{ seg.departure }} · {{ seg.nights }} ноч.</div>{% endfor %}</div>{% endif %}</li>{% endfor %}</ul></div>{% endif %}
+
+{% if quote['tariff_status']=='live_hms' and pricing %}
+<div class="aq-commercial">
+  <div class="muted">Вартість для гостя</div><div class="aq-price">{{ money_fmt(quote['commercial_total'] or quote['stay_total_before_tourist_tax'] or 0) }} {{ quote['currency'] }}</div>
+  <div class="aq-price-grid">
+    <div class="aq-price-item"><div class="muted">Проживання та додаткове розміщення</div><b>{{ money_fmt(pricing.source_stay_total_before_tourist_tax if pricing.source_stay_total_before_tourist_tax is defined else quote['stay_total_before_tourist_tax'] or 0) }}</b> {{ quote['currency'] }}</div>
+    {% if pricing.early_checkin_requested %}<div class="aq-price-item"><div class="muted">Ранній заїзд · 50% тарифу</div><b>+{{ money_fmt(pricing.early_checkin_total or 0) }}</b> {{ quote['currency'] }}{% if pricing.early_checkin_availability %}<div class="aq-rate-sub">{{ pricing.early_checkin_availability.available_count }} із {{ pricing.early_checkin_availability.requested_count }} номерів · перевірено {{ pricing.early_checkin_availability.checked_period }}{% if pricing.early_checkin_availability.unavailable_room_labels %}<br>Недоступні: № {{ pricing.early_checkin_availability.unavailable_room_labels|join(', ') }}{% endif %}</div>{% endif %}</div>{% endif %}
+    {% if pricing.late_checkout_requested %}<div class="aq-price-item"><div class="muted">Пізній виїзд · 50% тарифу</div><b>+{{ money_fmt(pricing.late_checkout_total or 0) }}</b> {{ quote['currency'] }}{% if pricing.late_checkout_availability %}<div class="aq-rate-sub">{{ pricing.late_checkout_availability.available_count }} із {{ pricing.late_checkout_availability.requested_count }} номерів · перевірено {{ pricing.late_checkout_availability.checked_period }}{% if pricing.late_checkout_availability.unavailable_room_labels %}<br>Недоступні: № {{ pricing.late_checkout_availability.unavailable_room_labels|join(', ') }}{% endif %}</div>{% endif %}</div>{% endif %}
+    <div class="aq-price-item"><div class="muted">До комерційної знижки</div><b>{{ money_fmt(quote['stay_total_before_tourist_tax'] or 0) }}</b> {{ quote['currency'] }}</div>
+    <div class="aq-price-item"><div class="muted">Комерційна знижка {{ '%.2f'|format(quote['commercial_discount_percent'] or 0) }}%</div><b>{% if (quote['commercial_discount_amount'] or 0) > 0 %}−{{ money_fmt(quote['commercial_discount_amount']) }}{% else %}{{ money_fmt(0) }}{% endif %}</b> {{ quote['currency'] }}</div>
+    {% if pricing.tourist_tax_estimate is defined and pricing.tourist_tax_estimate %}<div class="aq-price-item"><div class="muted">Туристичний збір · якщо застосовується</div><b>+{{ money_fmt(pricing.tourist_tax_estimate) }}</b> {{ quote['currency'] }}<div class="aq-rate-sub">{{ pricing.tourist_tax_adult_nights }} доросло-ноч. × {{ money_fmt(pricing.tourist_tax_rate) }} UAH · сплачується окремо</div></div>{% endif %}
+    <div class="aq-price-item"><div class="muted">Після знижки</div><b>{{ money_fmt(quote['commercial_total'] or quote['stay_total_before_tourist_tax'] or 0) }}</b> {{ quote['currency'] }}</div>
+  </div>
+  <div class="aq-tax"><b>Туристичний збір показаний окремо та не входить у вартість проживання.</b> Орієнтовний розрахунок: 43,24 грн за кожного дорослого за кожну ніч. За наявності документів про відрядження збір не нараховується.</div>
+  <div class="aq-terms"><b>Умови оплати та скасування</b><div>50% від вартості замовлених послуг — на підставі виставленого рахунку протягом 3-х банківських днів; доплата до 100% — за 48 годин до дати заїзду.</div><ul><li>без штрафних санкцій — до 10 діб до дати заїзду;</li><li>50% штрафу — від 10 діб до 48 годин до дати заїзду;</li><li>100% штрафу — менше ніж за 48 годин до дати заїзду.</li></ul></div>
+  <div class="aq-validity"><b>Актуальність пропозиції</b>Пропозиція сформована станом на <strong>{{ (version_created_at|string).replace('T', ' ')[:16] if version_created_at else 'момент формування' }}</strong>. Наявність номерів актуальна на момент формування та може змінюватися до підтвердження бронювання. <strong>Номери вважаються заброньованими та гарантованими після підтвердження замовлення і надходження погодженої передоплати.</strong></div>
+
+  {% if is_current_revision %}
+  <form method="post" class="aq-form">
+    <div class="field"><label>Знижка, %</label><input type="number" min="0" max="100" step="0.01" name="discount_percent" value="{{ quote['commercial_discount_percent'] or 0 }}"></div>
+    <div class="field grow"><label>Коментар до комерційних умов</label><input name="commercial_note" value="{{ quote['commercial_note'] or '' }}" placeholder="за домовленістю / постійний гість"></div>
+    <button class="btn primary" type="submit">Змінити комерційні умови</button>
+  </form>
+  <div class="muted" style="margin-top:8px">Базова вартість при зміні комерційної знижки не перераховується і не перезаписується.</div>
+  {% endif %}
+</div>
+{% else %}<div class="card"><b>Немає зафіксованої актуальної вартості.</b></div>{% endif %}
+
+{% if quote['guest_note'] or quote['manager_note'] %}<div class="card"><h3>Коментарі</h3>{% if quote['guest_note'] %}<div><b>Для гостя:</b> {{ quote['guest_note'] }}</div>{% endif %}{% if quote['manager_note'] %}<div style="margin-top:8px"><b>Внутрішній:</b> {{ quote['manager_note'] }}</div>{% endif %}</div>{% endif %}
+
+<details class="aq-details" {% if guest_list %}open{% endif %}><summary>Список гостей · {{ guest_list|length }} / {{ quote['guest_count'] }}</summary>
+  {% if is_current_revision %}
+  <form method="post" enctype="multipart/form-data" style="margin-top:12px" id="savedGuestListForm"><input type="hidden" name="detail_action" value="guest_list"><input type="hidden" name="guest_list_source" value="{{ quote['guest_list_source'] or '' }}">
+    <div class="actions" style="margin-bottom:10px"><input type="file" name="guest_file" accept=".xlsx,.csv"><button class="btn" type="button" id="savedAddGuest">+ Додати гостя</button><span class="muted">Excel/CSV можна додати до вже внесених вручну осіб.</span></div>
+    <div class="table-wrap aq-guest-table"><table><thead><tr><th>ПІБ</th><th>Тип</th><th>Платна дитина</th><th>Побажання</th><th>Разом із</th><th>Примітка</th><th></th></tr></thead><tbody id="savedGuestRows">{% for g in guest_list %}<tr class="saved-guest-row"><td><input type="hidden" name="guest_id" value="{{ g.guest_id }}"><input class="guest-name" name="guest_name" value="{{ g.full_name }}"></td><td><select name="guest_type">{% for v,l in guest_type_labels.items() %}<option value="{{ v }}" {{ 'selected' if g.guest_type==v }}>{{ l }}</option>{% endfor %}</select></td><td><select name="guest_paid_child"><option value="0" {{ 'selected' if not g.paid_child }}>Ні</option><option value="1" {{ 'selected' if g.paid_child }}>Так</option></select></td><td><select name="guest_preference">{% for v,l in guest_preference_labels.items() %}<option value="{{ v }}" {{ 'selected' if g.preference==v }}>{{ l }}</option>{% endfor %}</select></td><td><input name="guest_roommate" value="{{ g.roommate }}"></td><td><input name="guest_row_note" value="{{ g.note }}"></td><td><button class="btn saved-remove" type="button">×</button></td></tr>{% endfor %}</tbody></table></div>
+    <div class="actions" style="margin-top:10px"><button class="btn primary" type="submit">Зберегти список гостей</button><span class="muted">Список можна доповнювати після прорахунку. Кількість у збереженій пропозиції не змінюється.</span></div>
+  </form>
+  {% else %}
+  <div class="table-wrap aq-guest-table" style="margin-top:12px"><table><thead><tr><th>ПІБ</th><th>Тип</th><th>Побажання</th><th>Разом із</th><th>Примітка</th></tr></thead><tbody>{% for g in guest_list %}<tr><td><b>{{ g.full_name }}</b></td><td>{{ guest_type_labels.get(g.guest_type,g.guest_type) }}</td><td>{{ guest_preference_labels.get(g.preference,g.preference) }}</td><td>{{ g.roommate or '—' }}</td><td>{{ g.note or '—' }}</td></tr>{% endfor %}</tbody></table></div>
+  {% endif %}
+</details>
+
+{% if revisions %}<details class="aq-details" open><summary>Історія версій</summary><div class="table-wrap" style="margin-top:10px"><table class="aq-history"><thead><tr><th>Версія</th><th>Дата</th><th>Тип зміни</th><th>Знижка</th><th>Вартість для гостя</th><th>Коментар</th><th></th></tr></thead><tbody>{% for r in revisions %}<tr><td><b>v{{ r['revision_no'] }}</b>{% if r['revision_no']==quote['revision_no'] %} · переглядається{% endif %}</td><td>{{ (r['created_at']|string).replace('T',' ')[:16] }}</td><td>{% if r['revision_no']==1 %}Початкова{% elif r['revision_kind']=='manual_recalculation' %}Ручне розміщення + перерахунок{% elif r['revision_kind']=='recalculation' %}Перерахунок{% elif r['revision_kind']=='hms_compatibility_autofix' %}HMS compatibility autofix{% else %}Комерційні умови{% endif %}</td><td>{{ '%.2f'|format(r['discount_percent'] or 0) }}%</td><td><b>{{ '%.2f'|format(r['commercial_total'] or 0) }}</b></td><td>{{ r['commercial_note'] or '—' }}</td><td><a class="btn" href="{{ url_for('accommodation.quote_detail', quote_id=quote['quote_id'], revision=r['revision_no']) }}">Відкрити</a></td></tr>{% endfor %}</tbody></table></div></details>{% endif %}
+
+<script>
+(function(){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function dayLabel(v){var p=String(v||'').split('-');return p.length===3?p[2]+'.'+p[1]:v;}
+  function nightOccupied(item, day){
+    var s=new Date(item.start), e=new Date(item.end), d=new Date(day+'T15:00:00'), dn=new Date(new Date(day+'T00:00:00').getTime()+24*3600*1000);
+    // A hotel night is represented by the interval from check-in afternoon to next checkout.
+    return !isNaN(s)&&!isNaN(e)&&s<dn&&e>d;
+  }
+  document.querySelectorAll('.aq-room-editor').forEach(function(editor){
+    var form=editor.querySelector('.aq-room-editor-form'), body=editor.querySelector('.aq-editor-rows'), tpl=editor.querySelector('.aq-editor-template'), add=editor.querySelector('.aq-editor-add');
+    var board=editor.querySelector('.aq-timetable'), boardOpen=editor.querySelector('.aq-board-open'), boardClose=editor.querySelector('.aq-board-close');
+    var boardLoaded=false, boardData=null, boardTarget=null, boardDayW=62, boardUserZoom=false, boardViewArrival=board&&board.dataset.arrival||'', boardViewDeparture=board&&board.dataset.departure||'', boardRequestSeq=0;
+    function updateStay(row){
+      var room=row.querySelector('.aq-editor-room-select'), opt=room&&room.options[room.selectedIndex];
+      ['early','late'].forEach(function(kind){
+        var sel=row.querySelector('.aq-'+kind+'-select'), status=row.querySelector('.aq-stay-status[data-kind="'+kind+'"]');
+        if(!sel)return;
+        var ok=!!(opt&&opt.dataset[kind]==='1'), yes=sel.querySelector('option[value="1"]');
+        if(yes)yes.disabled=!ok;if(!ok&&sel.value==='1')sel.value='0';
+        if(status)status.textContent=ok?'Доступний':(room&&room.value?(kind==='early'?'Недоступний: номер зайнятий попередньої ночі':'Недоступний: номер зайнятий наступної ночі'):'Виберіть номер');
+      });
+    }
+    function setTarget(row){
+      editor.querySelectorAll('.aq-editor-row').forEach(function(r){r.classList.remove('aq-board-target-active');});
+      boardTarget=row||null;if(boardTarget)boardTarget.classList.add('aq-board-target-active');
+    }
+    function bind(row){
+      var rm=row.querySelector('.aq-editor-remove'), room=row.querySelector('.aq-editor-room-select'), first=row.querySelector('td');
+      if(rm)rm.addEventListener('click',function(){if(boardTarget===row)setTarget(null);row.remove();if(boardLoaded&&boardData)renderBoard(boardData);});
+      if(room)room.addEventListener('change',function(){updateStay(row);if(boardLoaded&&boardData)renderBoard(boardData);});
+      if(first&&!first.querySelector('.aq-room-pick')){var b=document.createElement('button');b.type='button';b.className='btn aq-room-pick';b.textContent='Вибрати на шахматці';b.addEventListener('click',function(){setTarget(row);openBoard();});first.appendChild(b);}
+      updateStay(row);
+    }
+    function addRow(){if(!tpl||!body)return null;var frag=tpl.content.cloneNode(true),row=frag.querySelector('.aq-editor-row');body.appendChild(frag);bind(row);if(boardLoaded&&boardData)renderBoard(boardData);return row;}
+    if(body)body.querySelectorAll('.aq-editor-row').forEach(bind);
+    if(add)add.addEventListener('click',function(){var row=addRow();if(row){var sel=row.querySelector('.aq-editor-room-select');if(sel)sel.focus();}});
+    editor.querySelectorAll('.aq-stay-bulk').forEach(function(btn){btn.addEventListener('click',function(){var kind=btn.dataset.kind;editor.querySelectorAll('.aq-editor-row').forEach(function(row){updateStay(row);var sel=row.querySelector('.aq-'+kind+'-select'),room=row.querySelector('.aq-editor-room-select'),opt=room&&room.options[room.selectedIndex];if(sel&&opt&&opt.dataset[kind]==='1')sel.value='1';});});});
+    editor.querySelectorAll('.aq-stay-clear').forEach(function(btn){btn.addEventListener('click',function(){var kind=btn.dataset.kind;editor.querySelectorAll('.aq-'+kind+'-select').forEach(function(sel){sel.value='0';});});});
+    if(form)form.addEventListener('submit',function(e){var seen={},dup='';form.querySelectorAll('.aq-editor-room-select').forEach(function(sel){var v=sel.value;if(v){if(seen[v])dup=v;seen[v]=1;}});if(dup){e.preventDefault();alert('Номер '+dup+' вибрано двічі на цю ніч.');}});
+
+    function quotePlan(){try{return JSON.parse((board&&board.querySelector('.aq-board-plan')||{}).textContent||'[]');}catch(e){return [];}}
+    function planIndex(){var idx={};quotePlan().forEach(function(d){var day=String(d.date||'');(d.rows||[]).forEach(function(r){var ids=r.room_ids||[], labels=r.room_labels||[];for(var i=0;i<Math.min(ids.length,Number(r.allocated_rooms||ids.length));i++){var id=String(ids[i]);idx[day+'|'+id]={label:String(labels[i]||ids[i])};}});});var edit=board&&board.dataset.editDay;if(edit&&body){Object.keys(idx).forEach(function(k){if(k.indexOf(edit+'|')===0)delete idx[k];});body.querySelectorAll('.aq-editor-room-select').forEach(function(sel){if(sel.value)idx[edit+'|'+String(sel.value)]={label:String(sel.options[sel.selectedIndex]?.text||sel.value)};});}return idx;}
+    function renderBoard(data){
+      if(!board)return;
+      var scroll=board.querySelector('.aq-board-scroll'),msg=board.querySelector('.aq-board-message'),edit=board.dataset.editDay,planned=planIndex(),days=data.days||[],roomW=184;if(!boardUserZoom&&days.length){var usable=Math.max(720,(scroll.clientWidth||window.innerWidth||1200)-roomW-2);boardDayW=Math.max(48,Math.min(92,Math.floor(usable/days.length)));}var dayW=boardDayW,oldLeft=scroll.scrollLeft||0,oldDayW=Number(scroll.dataset.dayw||dayW);
+      var groups={},order=[],roomOcc={};
+      (data.rooms||[]).forEach(function(r){var k=String(r.room_type_id)+'|'+r.category;if(!groups[k]){groups[k]=[];order.push(k);}groups[k].push(r);});
+      (data.occupancies||[]).forEach(function(o){var k=String(o.room_id);(roomOcc[k]||(roomOcc[k]=[])).push(o);});
+      if(!days.length){msg.hidden=false;msg.textContent='Немає даних для вибраного періоду.';return;}
+      var dayMs=86400000, winStart=new Date(days[0]+'T00:00:00'), totalDays=days.length, totalW=roomW+totalDays*dayW;
+      function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+      function posDate(v){var d=new Date(v);return isNaN(d)?0:(d-winStart)/dayMs;}
+      function hm(v,fallback){var m=String(v||fallback||'00:00').match(/(\d{1,2}):(\d{2})/);return m?(Number(m[1])*60+Number(m[2]))/1440:0;}
+      var ci=hm(data.check_in_time,'15:00'),co=hm(data.check_out_time,'12:00');
+      function overlap(a,b,o){var os=posDate(o.start),oe=posDate(o.end);return os<b&&oe>a;}
+      function freeOnNight(rid,day){return !(roomOcc[String(rid)]||[]).some(function(o){return nightOccupied(o,day);});}
+      function fmtDay(day){var d=new Date(day+'T12:00:00'),wd=['Нд','Пн','Вт','Ср','Чт','Пт','Сб'][d.getDay()];return '<span>'+wd+'</span><b>'+String(d.getDate()).padStart(2,'0')+'</b>';}
+      var html='<div class="aq-board-legend"><span><i class="aq-dot" style="background:#9fc3f9"></i>ця пропозиція</span><span><i class="aq-dot" style="background:#8dc4c9"></i>бронювання</span><span><i class="aq-dot" style="background:#f6c77f"></i>службове блокування</span><span><i class="aq-dot" style="background:#f4a2aa"></i>конфлікт</span></div><div class="aq-timeline" style="width:'+totalW+'px"><div class="aq-timeline-head" style="grid-template-columns:'+roomW+'px repeat('+totalDays+','+dayW+'px)"><div class="aq-head-room">Номер / місткість</div>';
+      days.forEach(function(day){var wd=new Date(day+'T12:00:00').getDay();html+='<div class="aq-day-head '+((wd===0||wd===6)?'weekend ':'')+(day===edit?'edit-day':'')+'">'+fmtDay(day)+'</div>';});html+='</div>';
+      order.forEach(function(gk){var rs=groups[gk],freeCount=edit?rs.filter(function(r){return freeOnNight(r.room_id,edit);}).length:rs.length;html+='<section class="aq-category" data-cat="'+esc(gk)+'"><div class="aq-cat-strip" style="grid-template-columns:'+roomW+'px '+(totalDays*dayW)+'px"><button type="button" class="aq-cat-head"><span><span class="aq-cat-arrow">▾</span>'+esc(rs[0].category)+'</span><span>'+freeCount+'/'+rs.length+'</span></button><div></div></div><div class="aq-cat-rooms">';
+        rs.forEach(function(r){var rid=String(r.room_id),selected=body&&Array.from(body.querySelectorAll('.aq-editor-room-select')).some(function(sel){return String(sel.value)===rid;});html+='<div class="aq-room-row '+(selected?'aq-selected-room':'')+'" style="grid-template-columns:'+roomW+'px '+(totalDays*dayW)+'px"><div class="aq-room-label"><b>№ '+esc(r.room_number)+'</b><span>'+esc(r.main_places)+'+'+esc(r.extra_places)+'</span></div><div class="aq-room-track" style="width:'+(totalDays*dayW)+'px">';
+          days.forEach(function(day,i){var wd=new Date(day+'T12:00:00').getDay();html+='<span class="aq-day-band '+((wd===0||wd===6)?'weekend ':'')+(day===edit?'edit-day':'')+'" style="left:'+(i*dayW)+'px;width:'+dayW+'px"></span>';});
+          (roomOcc[rid]||[]).forEach(function(o){var a=clamp(posDate(o.start),0,totalDays),b=clamp(posDate(o.end),0,totalDays);if(b<=0||a>=totalDays||b<=a)return;var left=a*dayW,width=Math.max(5,(b-a)*dayW),cls=o.kind==='service_block'?'blocked':'occupied',lab=o.kind==='service_block'?'Блок':'Бронювання',title=(o.label||lab)+' · '+String(o.start||'').replace('T',' ')+' → '+String(o.end||'').replace('T',' ');html+='<div class="aq-bar '+cls+'" style="left:'+left+'px;width:'+width+'px" title="'+esc(title)+'">'+(width>68?lab:'')+'</div>';});
+          var st=-1;for(var i=0;i<=totalDays;i++){var yes=i<totalDays&&planned[days[i]+'|'+rid];if(yes&&st<0)st=i;if((!yes||i===totalDays)&&st>=0){var en=i-1,a=st+ci,b=(en+1)+co,conf=(roomOcc[rid]||[]).some(function(o){return overlap(a,b,o);}),left=a*dayW,width=Math.max(5,(b-a)*dayW);html+='<div class="aq-bar '+(conf?'conflict':'planned')+'" style="left:'+left+'px;width:'+width+'px" title="'+(conf?'Конфлікт із живою зайнятістю':'Наша пропозиція')+'">'+(width>78?(conf?'Конфлікт':'Наша група'):'')+'</div>';st=-1;}}
+          var ei=days.indexOf(edit);if(ei>=0&&freeOnNight(rid,edit))html+='<button type="button" class="aq-pick-zone" data-pick-room="'+esc(rid)+'" title="Вибрати № '+esc(r.room_number)+'" style="left:'+(ei*dayW)+'px;width:'+dayW+'px"></button>';html+='</div></div>';});html+='</div></section>';});html+='</div>';
+      scroll.innerHTML=html;scroll.hidden=false;msg.hidden=true;scroll.dataset.dayw=String(dayW);if(scroll.dataset.centered==='1'){scroll.scrollLeft=oldLeft*(dayW/oldDayW);}else{var focus=days.indexOf(edit);if(focus>=0)scroll.scrollLeft=Math.max(0,(focus-3)*dayW);scroll.dataset.centered='1';}
+      var filter=board.querySelector('.aq-board-cat-filter'),range=board.querySelector('.aq-board-range');if(range)range.textContent=dayLabel(days[0])+' — '+dayLabel(days[days.length-1]);
+      if(filter){var keep=filter.value;if(!filter.dataset.ready){filter.innerHTML='<option value="">Усі категорії</option>'+order.map(function(k){return '<option value="'+esc(k)+'">'+esc(groups[k][0].category)+'</option>';}).join('');filter.dataset.ready='1';}if(keep)filter.value=keep;scroll.querySelectorAll('.aq-category').forEach(function(sec){sec.style.display=(!filter.value||sec.dataset.cat===filter.value)?'':'none';});}
+      scroll.querySelectorAll('.aq-cat-head').forEach(function(btn){btn.addEventListener('click',function(){var rooms=btn.closest('.aq-category').querySelector('.aq-cat-rooms'),arr=btn.querySelector('.aq-cat-arrow'),closed=rooms.classList.toggle('collapsed');if(arr)arr.textContent=closed?'▸':'▾';});});
+      scroll.querySelectorAll('[data-pick-room]').forEach(function(btn){btn.addEventListener('click',function(){var id=String(btn.dataset.pickRoom),row=boardTarget||addRow();if(!row)return;var sel=row.querySelector('.aq-editor-room-select'),option=sel&&Array.from(sel.options).find(function(o){return String(o.value)===id;});if(!option){alert('Цей номер не входить до актуально вільних.');return;}sel.value=id;sel.dispatchEvent(new Event('change'));setTarget(row);board.classList.remove('open');document.body.classList.remove('aq-board-opened');row.scrollIntoView({behavior:'smooth',block:'center'});});});
+    }
+    function isoShift(v,n){var p=String(v||'').split('-').map(Number);if(p.length!==3||!p[0])return v;var d=new Date(Date.UTC(p[0],p[1]-1,p[2]));d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+    function stayLength(a,d){var aa=new Date(a+'T00:00:00Z'),dd=new Date(d+'T00:00:00Z');return Math.max(1,Math.round((dd-aa)/86400000)||1);}
+    function loadBoard(a,d,resetCenter){
+      if(!board)return;boardViewArrival=a;boardViewDeparture=d;if(resetCenter){var sc=board.querySelector('.aq-board-scroll');if(sc)sc.dataset.centered='0';}
+      var msg=board.querySelector('.aq-board-message');msg.hidden=false;msg.textContent='Завантажую актуальну шахматку…';var seq=++boardRequestSeq;var u=board.dataset.url+'?arrival='+encodeURIComponent(a)+'&departure='+encodeURIComponent(d)+'&pad_days=7';
+      fetch(u,{headers:{'Accept':'application/json'}}).then(function(r){return r.json().then(function(j){if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));return j;});}).then(function(j){if(seq!==boardRequestSeq)return;boardLoaded=true;boardData=j;renderBoard(j);}).catch(function(e){if(seq!==boardRequestSeq)return;msg.hidden=false;msg.innerHTML='<b>Не вдалося завантажити шахматку.</b><div>'+esc(e.message||e)+'</div>';});
+    }
+    function openBoard(){
+      if(!board)return;board.classList.add('open');document.body.classList.add('aq-board-opened');if(boardLoaded){renderBoard(boardData);return;}loadBoard(boardViewArrival||board.dataset.arrival,boardViewDeparture||board.dataset.departure,true);
+    }
+    if(boardOpen)boardOpen.addEventListener('click',function(){setTarget(null);openBoard();});
+    if(boardClose)boardClose.addEventListener('click',function(){board.classList.remove('open');document.body.classList.remove('aq-board-opened');setTarget(null);});
+    var catFilter=board&&board.querySelector('.aq-board-cat-filter');if(catFilter)catFilter.addEventListener('change',function(){if(boardData)renderBoard(boardData);});
+    var zOut=board&&board.querySelector('.aq-board-zoom-out'),zIn=board&&board.querySelector('.aq-board-zoom-in');if(zOut)zOut.addEventListener('click',function(){boardUserZoom=true;boardDayW=Math.max(44,boardDayW-6);if(boardData)renderBoard(boardData);});if(zIn)zIn.addEventListener('click',function(){boardUserZoom=true;boardDayW=Math.min(110,boardDayW+6);if(boardData)renderBoard(boardData);});
+    var bp=board&&board.querySelector('.aq-board-prev'),bn=board&&board.querySelector('.aq-board-next'),bt=board&&board.querySelector('.aq-board-today');if(bp)bp.addEventListener('click',function(){loadBoard(isoShift(boardViewArrival,-7),isoShift(boardViewDeparture,-7),true);});if(bn)bn.addEventListener('click',function(){loadBoard(isoShift(boardViewArrival,7),isoShift(boardViewDeparture,7),true);});if(bt)bt.addEventListener('click',function(){var len=stayLength(boardViewArrival||board.dataset.arrival,boardViewDeparture||board.dataset.departure),today=new Date().toISOString().slice(0,10);loadBoard(today,isoShift(today,len),true);});
+    window.addEventListener('resize',function(){if(board&&board.classList.contains('open')&&!boardUserZoom&&boardData)renderBoard(boardData);});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&board&&board.classList.contains('open')){board.classList.remove('open');document.body.classList.remove('aq-board-opened');setTarget(null);}});
+  });
+  var openEditor=document.querySelector('.aq-room-editor');if(openEditor){setTimeout(function(){openEditor.scrollIntoView({behavior:'smooth',block:'center'});},80);}
+})();
+</script>
+
+<script>
+(function(){
+  var overlay=null,frame=null,activeEditor=null,activeRow=null;
+  function closeBoard(){if(overlay){overlay.remove();overlay=null;frame=null;}document.body.style.overflow='';if(activeRow)activeRow.classList.remove('aq-board-target-active');activeRow=null;activeEditor=null;}
+  function parsePlan(editor){try{var el=editor.querySelector('.rw-timetable-plan');return JSON.parse(el?el.textContent:'[]')||[];}catch(e){return [];}}
+  function buildContext(editor,row){
+    var form=editor.querySelector('.aq-room-editor-form'),edit=form&&form.dataset.day||'',idx={};
+    parsePlan(editor).forEach(function(d){var day=String(d.date||'');(d.rows||[]).forEach(function(r){var ids=r.room_ids||[];for(var i=0;i<Math.min(ids.length,Number(r.allocated_rooms||ids.length));i++){if(ids[i]!=null)idx[day+'|'+String(ids[i])]=1;}});});
+    Object.keys(idx).forEach(function(k){if(k.indexOf(edit+'|')===0)delete idx[k];});
+    var selected=[];editor.querySelectorAll('.aq-editor-room-select').forEach(function(sel){if(sel.value){selected.push(String(sel.value));idx[edit+'|'+String(sel.value)]=1;}});
+    var targetRoom='';if(row){var s=row.querySelector('.aq-editor-room-select');targetRoom=s&&s.value?String(s.value):'';}
+    return {planned:idx,selectedRoomIds:selected,targetRoomId:targetRoom,editDay:edit};
+  }
+  function openBoard(editor,row){
+    var form=editor.querySelector('.aq-room-editor-form'),edit=form&&form.dataset.day||'',arrival={{ quote['arrival']|tojson }},departure={{ quote['departure']|tojson }};
+    closeBoard();activeEditor=editor;activeRow=row||null;if(activeRow)activeRow.classList.add('aq-board-target-active');
+    overlay=document.createElement('div');overlay.id='rwTimetableOverlay';overlay.style.cssText='position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;z-index:2147483640;background:#fff;margin:0;padding:0;';
+    frame=document.createElement('iframe');frame.title='Шахматка номерів';frame.style.cssText='display:block;width:100%;height:100%;border:0;margin:0;padding:0;background:#fff;';
+    frame.src={{ url_for('accommodation.timetable_view')|tojson }}+'?arrival='+encodeURIComponent(arrival)+'&departure='+encodeURIComponent(departure)+'&edit_day='+encodeURIComponent(edit)+'&mode=select';
+    overlay.appendChild(frame);document.body.appendChild(overlay);document.body.style.overflow='hidden';
+  }
+  function chooseRoom(roomId){
+    if(!activeEditor)return;var row=activeRow;
+    if(!row){var add=activeEditor.querySelector('.aq-editor-add');if(add)add.click();var rows=activeEditor.querySelectorAll('.aq-editor-row');row=rows.length?rows[rows.length-1]:null;}
+    if(!row)return;var sel=row.querySelector('.aq-editor-room-select');if(!sel)return;var option=Array.from(sel.options).find(function(o){return String(o.value)===String(roomId);});
+    if(!option){alert('Цей номер не входить до актуально доступних варіантів для цієї ночі.');return;}
+    sel.value=String(roomId);sel.dispatchEvent(new Event('change',{bubbles:true}));closeBoard();row.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  document.addEventListener('click',function(e){
+    var pick=e.target.closest&&e.target.closest('.aq-room-pick');if(pick){var editor=pick.closest('.aq-room-editor'),row=pick.closest('.aq-editor-row');if(editor){e.preventDefault();e.stopImmediatePropagation();openBoard(editor,row);}return;}
+    var open=e.target.closest&&e.target.closest('.aq-board-open');if(open){var editor2=open.closest('.aq-room-editor');if(editor2){e.preventDefault();e.stopImmediatePropagation();openBoard(editor2,null);}}
+  },true);
+  window.addEventListener('message',function(e){if(e.origin!==location.origin||!e.data)return;if(e.data.type==='rw-timetable-close'){closeBoard();return;}if(e.data.type==='rw-timetable-ready'&&frame&&activeEditor){frame.contentWindow.postMessage({type:'rw-timetable-context',context:buildContext(activeEditor,activeRow)},location.origin);return;}if(e.data.type==='rw-timetable-pick'){chooseRoom(e.data.room_id);}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay)closeBoard();});
+})();
+</script>
+
+<script>
+(function(){var rows=document.getElementById('savedGuestRows'),add=document.getElementById('savedAddGuest');if(!rows)return;function bind(r){var b=r.querySelector('.saved-remove');if(b)b.addEventListener('click',function(){r.remove();});}function addRow(){var r=document.createElement('tr');r.className='saved-guest-row';r.innerHTML='<td><input type="hidden" name="guest_id"><input class="guest-name" name="guest_name" placeholder="ПІБ гостя"></td><td><select name="guest_type"><option value="adult">Дорослий</option><option value="child">Дитина</option></select></td><td><select name="guest_paid_child"><option value="0">Ні</option><option value="1">Так</option></select></td><td><select name="guest_preference"><option value="auto">Без особливих умов</option><option value="twin">Бажано Twin / окремі ліжка</option><option value="separate_bed">Обов’язково окреме ліжко</option><option value="separate_room">Окрема кімната</option></select></td><td><input name="guest_roommate"></td><td><input name="guest_row_note"></td><td><button class="btn saved-remove" type="button">×</button></td>';rows.appendChild(r);bind(r);r.querySelector('[name=guest_name]').focus();}rows.querySelectorAll('.saved-guest-row').forEach(bind);if(add)add.addEventListener('click',addRow);})();
+</script>
+{% endblock %}
+
+<!-- RIVERWOOD_HMS_COMPAT_AUTOFIX_V3_UI -->
+
+<!-- RIVERWOOD_HMS_COMPAT_AUTOFIX_V4_UI -->
+
+<!-- RIVERWOOD_HMS_COMPAT_AUTOFIX_V5_UI -->
+
+<!-- RIVERWOOD_HMS_COMPAT_AUTOFIX_V6_UI -->
+
+<!-- RIVERWOOD_HMS_WRITER_V10_DASHBOARD_PAIR -->
