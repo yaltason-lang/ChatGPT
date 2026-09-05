@@ -1,0 +1,106 @@
+name: Build Riverwood Early Late Adjacent Day V1
+
+on:
+  push:
+    branches:
+      - riverwood-earlylate-adjacent-day-allocation-v1
+    paths:
+      - tools/patch_live_operations_earlylate_v1.py
+      - tools/test_earlylate_adjacent_v1.py
+      - release_payload_earlylate_v1/**
+      - .github/workflows/build-earlylate-adjacent-v1.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run adjacent-day regression tests
+        shell: pwsh
+        run: |
+          py -3 tools/test_earlylate_adjacent_v1.py
+
+      - name: Patch and compile reference Operations source
+        shell: pwsh
+        run: |
+          py -3 tools/patch_live_operations_earlylate_v1.py --source accommodation_module.py --out _ci_patched_reference.py --no-sha-gate --no-backup
+          py -3 -m py_compile _ci_patched_reference.py
+          $t = Get-Content _ci_patched_reference.py -Raw -Encoding UTF8
+          if ($t -notmatch 'RIVERWOOD_EARLYLATE_ADJACENT_DAY_ALLOC_V1') { throw 'marker missing' }
+          if ($t -notmatch '_group_adjacent_day_constraints') { throw 'adjacent constraint helper missing' }
+          if ($t -notmatch 'early_checkin=bool\(early_checkin\), late_checkout=bool\(late_checkout\)') { throw 'calculator wiring missing' }
+          if ($t -notmatch "'paid_children'") { throw 'paid_children lost' }
+
+      - name: Static deployment safety checks
+        shell: pwsh
+        run: |
+          $p = Get-Content tools/patch_live_operations_earlylate_v1.py -Raw -Encoding UTF8
+          $b = Get-Content release_payload_earlylate_v1/APPLY_EARLYLATE_ADJACENT_DAY_V1.bat -Raw -Encoding UTF8
+          if ($p -match '(?i)taskkill|Stop-Process|sc\.exe\s+stop|net\s+stop|subprocess|os\.system') { throw 'patcher contains process lifecycle command' }
+          if ($b -match '(?i)taskkill|Stop-Process|sc\.exe\s+stop|net\s+stop') { throw 'BAT contains process lifecycle command' }
+          if ($p -notmatch '139bf9dcf3bea9142d3e41b1d083dd5afe06489e8ca5d278a4bfe8b93b89727c') { throw 'captured live SHA gate missing' }
+          if ($p -match '8082') { throw 'patcher must not reference :8082' }
+
+      - name: Build package
+        shell: pwsh
+        run: |
+          $pkg = 'Riverwood_5SEP_EARLYLATE_ADJACENT_DAY_ALLOCATION_V1'
+          $stage = Join-Path $env:RUNNER_TEMP $pkg
+          New-Item -ItemType Directory -Path $stage -Force | Out-Null
+          Copy-Item release_payload_earlylate_v1/APPLY_EARLYLATE_ADJACENT_DAY_V1.bat $stage
+          Copy-Item release_payload_earlylate_v1/README.txt $stage
+          Copy-Item tools/patch_live_operations_earlylate_v1.py (Join-Path $stage 'patch_live_operations_earlylate_v1.py')
+          @(
+            'BUILD=Riverwood_5SEP_EARLYLATE_ADJACENT_DAY_ALLOCATION_V1',
+            'BASELINE_CAPTURE_SHA256=139bf9dcf3bea9142d3e41b1d083dd5afe06489e8ca5d278a4bfe8b93b89727c',
+            'RULE_EARLY=previous hotel night must be free for selected physical RoomID before allocation',
+            'RULE_LATE=following hotel night must be free for selected physical RoomID before allocation',
+            'WRITER_8085=not modified',
+            'SIDECAR_8082=not touched',
+            'TESTS=PASS'
+          ) | Set-Content (Join-Path $stage 'BUILD_TEST_REPORT.txt') -Encoding UTF8
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          $zip = Join-Path 'release' ($pkg + '.zip')
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -CompressionLevel Optimal
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Path (Join-Path 'release' ($pkg + '.sha256.txt')) -Value $hash -Encoding ASCII
+          Write-Host "PACKAGE=$zip"
+          Write-Host "SHA256=$hash"
+
+      - name: Verify packaged payload
+        shell: pwsh
+        run: |
+          $pkg = 'Riverwood_5SEP_EARLYLATE_ADJACENT_DAY_ALLOCATION_V1'
+          $zip = Join-Path 'release' ($pkg + '.zip')
+          $verify = Join-Path $env:RUNNER_TEMP 'verify_earlylate_v1'
+          Expand-Archive -Path $zip -DestinationPath $verify -Force
+          foreach ($f in @('APPLY_EARLYLATE_ADJACENT_DAY_V1.bat','patch_live_operations_earlylate_v1.py','README.txt','BUILD_TEST_REPORT.txt')) {
+            if (-not (Test-Path (Join-Path $verify $f))) { throw "missing packaged file: $f" }
+          }
+          py -3 -m py_compile (Join-Path $verify 'patch_live_operations_earlylate_v1.py')
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Riverwood_5SEP_EARLYLATE_ADJACENT_DAY_ALLOCATION_V1
+          path: |
+            release/Riverwood_5SEP_EARLYLATE_ADJACENT_DAY_ALLOCATION_V1.zip
+            release/Riverwood_5SEP_EARLYLATE_ADJACENT_DAY_ALLOCATION_V1.sha256.txt
+
+      - name: Publish package to branch release folder
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release/Riverwood_5SEP_EARLYLATE_ADJACENT_DAY_ALLOCATION_V1.zip release/Riverwood_5SEP_EARLYLATE_ADJACENT_DAY_ALLOCATION_V1.sha256.txt
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "Publish verified early late adjacent-day V1 package [skip ci]"
+            git push origin HEAD:riverwood-earlylate-adjacent-day-allocation-v1
+          }
