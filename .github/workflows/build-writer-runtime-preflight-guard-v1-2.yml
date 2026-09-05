@@ -1,0 +1,115 @@
+name: Build Riverwood Writer V10 Runtime Preflight Guard V1.2
+
+on:
+  push:
+    branches:
+      - riverwood-hms-writer-v10-runtime-preflight-guard-v1
+    paths:
+      - 'tools/apply_writer_v10_runtime_guard_v1_2_elevated.ps1'
+      - 'tools/APPLY_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1_2_SELF_ELEVATING.bat'
+      - 'tools/README_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1_2.txt'
+      - 'tools/restart_verified_writer_v10_no_cim.ps1'
+      - 'tools/patch_operations_writer_runtime_guard_v1.py'
+      - '.github/workflows/build-writer-runtime-preflight-guard-v1-2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PowerShell 5.1 parse checks
+        shell: powershell
+        run: |
+          foreach ($f in @('tools/apply_writer_v10_runtime_guard_v1_2_elevated.ps1','tools/restart_verified_writer_v10_no_cim.ps1')) {
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $f), [ref]$null, [ref]$errors)
+            if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Host; exit 1 }
+          }
+          Write-Host 'PS51 PARSE PASS'
+
+      - name: Static safety assertions
+        shell: powershell
+        run: |
+          $apply = Get-Content 'tools/apply_writer_v10_runtime_guard_v1_2_elevated.ps1' -Raw
+          $restart = Get-Content 'tools/restart_verified_writer_v10_no_cim.ps1' -Raw
+          if ($apply -notmatch 'WindowsPrincipal') { throw 'Administrator role check missing' }
+          if ($apply -notmatch 'Start-Process.+Verb RunAs') { throw 'Self-elevation UAC path missing' }
+          if ($apply -notmatch 'RIVERWOOD_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1') { throw 'Operations guard marker check missing' }
+          if ($restart -match 'Get-CimInstance|Win32_Process') { throw 'CIM dependency returned' }
+          if ($restart -notmatch '23462d24847e677e6fedaa1bf4cbe863899341d536122a3140a7408abb5926ac') { throw 'Exact writer SHA gate missing' }
+          if ($restart -notmatch 'Get-NetTCPConnection -LocalPort 8085') { throw ':8085 listener gate missing' }
+          if (($apply + $restart) -match '8082') { throw ':8082 must not be touched' }
+          Write-Host 'STATIC SAFETY PASS'
+
+      - name: Operations guard compatibility compile
+        shell: powershell
+        run: |
+          py -3 -m py_compile tools/patch_operations_writer_runtime_guard_v1.py
+          py -3 tools/patch_live_operations_earlylate_v1.py --source accommodation_module.py --out ops_earlylate.py --no-sha-gate --no-backup
+          py -3 tools/patch_operations_writer_runtime_guard_v1.py --source ops_earlylate.py --out ops_guarded.py --no-backup
+          py -3 -m py_compile ops_guarded.py
+          $t = Get-Content ops_guarded.py -Raw
+          if ($t -notmatch 'RIVERWOOD_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1') { throw 'Runtime preflight guard marker missing' }
+          Write-Host 'OPERATIONS GUARD COMPAT PASS'
+
+      - name: Build package
+        shell: powershell
+        run: |
+          $pkg = 'Riverwood_5SEP_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1_2_SELF_ELEVATING'
+          $dir = Join-Path $PWD $pkg
+          New-Item -ItemType Directory -Path $dir -Force | Out-Null
+          Copy-Item 'tools/APPLY_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1_2_SELF_ELEVATING.bat' (Join-Path $dir 'APPLY_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1_2_SELF_ELEVATING.bat')
+          Copy-Item 'tools/apply_writer_v10_runtime_guard_v1_2_elevated.ps1' (Join-Path $dir 'apply_writer_v10_runtime_guard_v1_2_elevated.ps1')
+          Copy-Item 'tools/restart_verified_writer_v10_no_cim.ps1' (Join-Path $dir 'restart_verified_writer_v10_no_cim.ps1')
+          Copy-Item 'tools/patch_operations_writer_runtime_guard_v1.py' (Join-Path $dir 'patch_operations_writer_runtime_guard_v1.py')
+          Copy-Item 'tools/README_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1_2.txt' (Join-Path $dir 'README.txt')
+          $zip = Join-Path $PWD ($pkg + '.zip')
+          Compress-Archive -Path $dir -DestinationPath $zip -Force
+          $sha = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Path ($pkg + '.sha256.txt') -Value $sha -Encoding ascii
+          Write-Host ('ZIP SHA256=' + $sha)
+
+      - name: Verify packaged files
+        shell: powershell
+        run: |
+          $pkg = 'Riverwood_5SEP_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1_2_SELF_ELEVATING'
+          $zip = $pkg + '.zip'
+          $out = Join-Path $PWD 'verify_zip_v12'
+          Expand-Archive -Path $zip -DestinationPath $out -Force
+          $base = Join-Path $out $pkg
+          foreach ($f in @('APPLY_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1_2_SELF_ELEVATING.bat','apply_writer_v10_runtime_guard_v1_2_elevated.ps1','restart_verified_writer_v10_no_cim.ps1','patch_operations_writer_runtime_guard_v1.py','README.txt')) {
+            if (-not (Test-Path (Join-Path $base $f))) { throw ('Missing packaged file: ' + $f) }
+          }
+          foreach ($f in @('apply_writer_v10_runtime_guard_v1_2_elevated.ps1','restart_verified_writer_v10_no_cim.ps1')) {
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile((Join-Path $base $f), [ref]$null, [ref]$errors)
+            if ($errors.Count -gt 0) { throw ('Packaged PowerShell parse failed: ' + $f) }
+          }
+          Write-Host 'ZIP VERIFY PASS'
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Riverwood_5SEP_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1_2_SELF_ELEVATING
+          path: |
+            Riverwood_5SEP_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1_2_SELF_ELEVATING.zip
+            Riverwood_5SEP_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1_2_SELF_ELEVATING.sha256.txt
+
+      - name: Publish package to branch release folder
+        shell: powershell
+        run: |
+          $pkg = 'Riverwood_5SEP_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1_2_SELF_ELEVATING'
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Copy-Item ($pkg + '.zip') (Join-Path 'release' ($pkg + '.zip')) -Force
+          Copy-Item ($pkg + '.sha256.txt') (Join-Path 'release' ($pkg + '.sha256.txt')) -Force
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release/
+          if (git diff --cached --quiet) { Write-Host 'No release changes'; exit 0 }
+          git commit -m 'Publish V1.2 self-elevating writer runtime guard package [skip ci]'
+          git push
