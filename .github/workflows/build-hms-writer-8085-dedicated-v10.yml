@@ -1,0 +1,115 @@
+name: Build Riverwood HMS Writer 8085 Dedicated V10
+
+on:
+  push:
+    branches:
+      - riverwood-hms-writer-v10-runtime-preflight-guard-v1
+    paths:
+      - 'tools/hms_booking_sidecar_8085_v10.py'
+      - 'tools/install_start_hms_writer_8085_v10.ps1'
+      - 'tools/INSTALL_START_HMS_WRITER_8085_V10.bat'
+      - 'tools/README_INSTALL_START_HMS_WRITER_8085_V10.txt'
+      - '.github/workflows/build-hms-writer-8085-dedicated-v10.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PowerShell 5.1 parse check
+        shell: powershell
+        run: |
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'tools/install_start_hms_writer_8085_v10.ps1'), [ref]$null, [ref]$errors)
+          if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Host; exit 1 }
+          Write-Host 'PS51 PARSE PASS'
+
+      - name: Python compile check
+        shell: powershell
+        run: |
+          python -m py_compile tools/hms_booking_sidecar_8085_v10.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Write-Host 'PYTHON COMPILE PASS'
+
+      - name: Static architecture and safety assertions
+        shell: powershell
+        run: |
+          $py = Get-Content 'tools/hms_booking_sidecar_8085_v10.py' -Raw
+          $ps = Get-Content 'tools/install_start_hms_writer_8085_v10.ps1' -Raw
+          $bat = Get-Content 'tools/INSTALL_START_HMS_WRITER_8085_V10.bat' -Raw
+          $sha = '23462d24847e677e6fedaa1bf4cbe863899341d536122a3140a7408abb5926ac'
+          if ($py -notmatch 'from flask import Flask') { throw 'Dedicated Flask app missing' }
+          if ($py -notmatch 'install_booking_adapter\(app\)') { throw 'Booking adapter is not installed into dedicated app' }
+          if ($py -notmatch '127\.0\.0\.1') { throw 'Loopback binding missing' }
+          if ($py -notmatch '8085') { throw 'Dedicated port 8085 missing' }
+          if ($py -notmatch [regex]::Escape($sha)) { throw 'Exact writer SHA gate missing in wrapper' }
+          if ($py -notmatch 'riverwood-writer-health') { throw 'Runtime health endpoint missing' }
+          if ($ps -notmatch [regex]::Escape($sha)) { throw 'Exact writer SHA gate missing in installer' }
+          if ($ps -notmatch 'pms_booking_adapter_v5328.py') { throw 'Writer target missing' }
+          if ($ps -notmatch 'BOOKING_ROUTES=') { throw 'Booking route registration probe missing' }
+          if ($ps -notmatch 'Get-NetTCPConnection -LocalPort 8085') { throw '8085 listener verification missing' }
+          if ($ps -notmatch 'riverwood-writer-health') { throw 'Health verification missing' }
+          if ($ps -match 'Stop-Process') { throw 'Installer must not stop any process' }
+          if ($ps -match 'START_DASHBOARD') { throw 'Wrong revenue dashboard launcher reference found' }
+          if ($bat -notmatch 'pause') { throw 'Persistent console pause missing' }
+          Write-Host 'STATIC ARCHITECTURE PASS'
+
+      - name: Build package
+        shell: powershell
+        run: |
+          $pkg = 'Riverwood_5SEP_HMS_WRITER_8085_DEDICATED_V10_FINAL'
+          $dir = Join-Path $PWD $pkg
+          New-Item -ItemType Directory -Path $dir -Force | Out-Null
+          Copy-Item 'tools/hms_booking_sidecar_8085_v10.py' (Join-Path $dir 'hms_booking_sidecar_8085_v10.py')
+          Copy-Item 'tools/install_start_hms_writer_8085_v10.ps1' (Join-Path $dir 'install_start_hms_writer_8085_v10.ps1')
+          Copy-Item 'tools/INSTALL_START_HMS_WRITER_8085_V10.bat' (Join-Path $dir 'INSTALL_START_HMS_WRITER_8085_V10.bat')
+          Copy-Item 'tools/README_INSTALL_START_HMS_WRITER_8085_V10.txt' (Join-Path $dir 'README.txt')
+          $zip = Join-Path $PWD ($pkg + '.zip')
+          Compress-Archive -Path $dir -DestinationPath $zip -Force
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Path ($pkg + '.sha256.txt') -Value $hash -Encoding ascii
+          Write-Host ('ZIP SHA256=' + $hash)
+
+      - name: Verify package
+        shell: powershell
+        run: |
+          $pkg = 'Riverwood_5SEP_HMS_WRITER_8085_DEDICATED_V10_FINAL'
+          $out = Join-Path $PWD 'verify_final'
+          Expand-Archive -Path ($pkg + '.zip') -DestinationPath $out -Force
+          $base = Join-Path $out $pkg
+          foreach ($f in @('hms_booking_sidecar_8085_v10.py','install_start_hms_writer_8085_v10.ps1','INSTALL_START_HMS_WRITER_8085_V10.bat','README.txt')) {
+            if (-not (Test-Path (Join-Path $base $f))) { throw ('Missing packaged file: ' + $f) }
+          }
+          python -m py_compile (Join-Path $base 'hms_booking_sidecar_8085_v10.py')
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged Python compile failed' }
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Join-Path $base 'install_start_hms_writer_8085_v10.ps1'), [ref]$null, [ref]$errors)
+          if ($errors.Count -gt 0) { throw 'Packaged PowerShell parse failed' }
+          Write-Host 'ZIP VERIFY PASS'
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Riverwood_5SEP_HMS_WRITER_8085_DEDICATED_V10_FINAL
+          path: |
+            Riverwood_5SEP_HMS_WRITER_8085_DEDICATED_V10_FINAL.zip
+            Riverwood_5SEP_HMS_WRITER_8085_DEDICATED_V10_FINAL.sha256.txt
+
+      - name: Publish package
+        shell: powershell
+        run: |
+          $pkg = 'Riverwood_5SEP_HMS_WRITER_8085_DEDICATED_V10_FINAL'
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Copy-Item ($pkg + '.zip') (Join-Path 'release' ($pkg + '.zip')) -Force
+          Copy-Item ($pkg + '.sha256.txt') (Join-Path 'release' ($pkg + '.sha256.txt')) -Force
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release/
+          if (git diff --cached --quiet) { Write-Host 'No release changes'; exit 0 }
+          git commit -m 'Publish dedicated HMS writer 8085 v10 final [skip ci]'
+          git push
