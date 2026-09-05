@@ -1,0 +1,100 @@
+name: Build Riverwood Writer 8085 Exact Native Recovery V2
+
+on:
+  push:
+    branches:
+      - riverwood-hms-writer-v10-runtime-preflight-guard-v1
+    paths:
+      - 'tools/recover_writer_8085_exact_native_v2.ps1'
+      - 'tools/RECOVER_WRITER_8085_EXACT_NATIVE_V2.bat'
+      - 'tools/README_RECOVER_WRITER_8085_EXACT_NATIVE_V2.txt'
+      - '.github/workflows/build-writer-8085-exact-native-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PowerShell 5.1 parse check
+        shell: powershell
+        run: |
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'tools/recover_writer_8085_exact_native_v2.ps1'), [ref]$null, [ref]$errors)
+          if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Host; exit 1 }
+          Write-Host 'PS51 PARSE PASS'
+
+      - name: Static safety assertions
+        shell: powershell
+        run: |
+          $ps = Get-Content 'tools/recover_writer_8085_exact_native_v2.ps1' -Raw
+          $bat = Get-Content 'tools/RECOVER_WRITER_8085_EXACT_NATIVE_V2.bat' -Raw
+          if ($ps -notmatch [regex]::Escape('C:\riverwood_revenue_bot\START_DASHBOARD.bat')) { throw 'Exact native launcher missing' }
+          if ($ps -notmatch '23462d24847e677e6fedaa1bf4cbe863899341d536122a3140a7408abb5926ac') { throw 'Exact writer SHA gate missing' }
+          if ($ps -notmatch 'RIVERWOOD_HMS_WRITER_V10_TECHNICAL_CARD_BUDGET_RESTORE_GATE') { throw 'Writer marker gate missing' }
+          if ($ps -notmatch 'Get-NetTCPConnection -LocalPort 8085') { throw '8085 listener check missing' }
+          if ($ps -match 'Stop-Process') { throw 'Recovery must not stop processes' }
+          if ($ps -notmatch 'RedirectStandardOutput' -or $ps -notmatch 'RedirectStandardError') { throw 'Persistent launch logs missing' }
+          if ($ps -notmatch 'LAST_RECOVERY_RESULT.txt') { throw 'Persistent result file missing' }
+          if ($bat -notmatch 'pause') { throw 'Wrapper must stay open' }
+          if ($bat -notmatch 'Verb RunAs') { throw 'Self elevation missing' }
+          Write-Host 'STATIC SAFETY PASS'
+
+      - name: Build package
+        shell: powershell
+        run: |
+          $pkg = 'Riverwood_5SEP_RECOVER_WRITER_8085_EXACT_NATIVE_V2'
+          $dir = Join-Path $PWD $pkg
+          New-Item -ItemType Directory -Path $dir -Force | Out-Null
+          Copy-Item 'tools/recover_writer_8085_exact_native_v2.ps1' (Join-Path $dir 'recover_writer_8085_exact_native_v2.ps1')
+          Copy-Item 'tools/RECOVER_WRITER_8085_EXACT_NATIVE_V2.bat' (Join-Path $dir 'RECOVER_WRITER_8085_EXACT_NATIVE_V2.bat')
+          Copy-Item 'tools/README_RECOVER_WRITER_8085_EXACT_NATIVE_V2.txt' (Join-Path $dir 'README.txt')
+          $zip = Join-Path $PWD ($pkg + '.zip')
+          Compress-Archive -Path $dir -DestinationPath $zip -Force
+          $sha = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Path ($pkg + '.sha256.txt') -Value $sha -Encoding ascii
+          Write-Host ('ZIP SHA256=' + $sha)
+
+      - name: Verify package
+        shell: powershell
+        run: |
+          $pkg = 'Riverwood_5SEP_RECOVER_WRITER_8085_EXACT_NATIVE_V2'
+          $zip = $pkg + '.zip'
+          $out = Join-Path $PWD 'verify_v2'
+          Expand-Archive -Path $zip -DestinationPath $out -Force
+          $base = Join-Path $out $pkg
+          foreach ($f in @('recover_writer_8085_exact_native_v2.ps1','RECOVER_WRITER_8085_EXACT_NATIVE_V2.bat','README.txt')) {
+            if (-not (Test-Path (Join-Path $base $f))) { throw ('Missing packaged file: ' + $f) }
+          }
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Join-Path $base 'recover_writer_8085_exact_native_v2.ps1'), [ref]$null, [ref]$errors)
+          if ($errors.Count -gt 0) { throw 'Packaged PowerShell parse failed' }
+          $b = Get-Content (Join-Path $base 'RECOVER_WRITER_8085_EXACT_NATIVE_V2.bat') -Raw
+          if ($b -notmatch 'THIS WINDOW WILL NOT CLOSE AUTOMATICALLY') { throw 'Persistent window marker missing' }
+          Write-Host 'ZIP VERIFY PASS'
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Riverwood_5SEP_RECOVER_WRITER_8085_EXACT_NATIVE_V2
+          path: |
+            Riverwood_5SEP_RECOVER_WRITER_8085_EXACT_NATIVE_V2.zip
+            Riverwood_5SEP_RECOVER_WRITER_8085_EXACT_NATIVE_V2.sha256.txt
+
+      - name: Publish package
+        shell: powershell
+        run: |
+          $pkg = 'Riverwood_5SEP_RECOVER_WRITER_8085_EXACT_NATIVE_V2'
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Copy-Item ($pkg + '.zip') (Join-Path 'release' ($pkg + '.zip')) -Force
+          Copy-Item ($pkg + '.sha256.txt') (Join-Path 'release' ($pkg + '.sha256.txt')) -Force
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release/
+          if (git diff --cached --quiet) { Write-Host 'No release changes'; exit 0 }
+          git commit -m 'Publish exact native 8085 recovery V2 [skip ci]'
+          git push
