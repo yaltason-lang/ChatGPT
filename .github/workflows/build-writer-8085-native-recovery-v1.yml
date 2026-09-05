@@ -1,0 +1,95 @@
+name: Build Riverwood Writer 8085 Native Recovery V1
+
+on:
+  push:
+    branches:
+      - riverwood-hms-writer-v10-runtime-preflight-guard-v1
+    paths:
+      - 'tools/recover_writer_8085_native_launcher_v1.ps1'
+      - 'tools/RECOVER_WRITER_8085_NATIVE_LAUNCHER_V1.bat'
+      - 'tools/README_RECOVER_WRITER_8085_NATIVE_LAUNCHER_V1.txt'
+      - '.github/workflows/build-writer-8085-native-recovery-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PowerShell 5.1 parse check
+        shell: powershell
+        run: |
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'tools/recover_writer_8085_native_launcher_v1.ps1'), [ref]$null, [ref]$errors)
+          if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Host; exit 1 }
+          Write-Host 'PS51 PARSE PASS'
+
+      - name: Static safety assertions
+        shell: powershell
+        run: |
+          $ps = Get-Content 'tools/recover_writer_8085_native_launcher_v1.ps1' -Raw
+          if ($ps -notmatch '23462d24847e677e6fedaa1bf4cbe863899341d536122a3140a7408abb5926ac') { throw 'Exact v10 SHA gate missing' }
+          if ($ps -notmatch 'RIVERWOOD_HMS_WRITER_V10_TECHNICAL_CARD_BUDGET_RESTORE_GATE') { throw 'v10 marker gate missing' }
+          if ($ps -notmatch 'pms_booking_adapter_v5328.py') { throw 'Writer target missing' }
+          if ($ps -notmatch 'Get-NetTCPConnection -LocalPort 8085') { throw ':8085 listener check missing' }
+          if ($ps -notmatch 'RedirectStandardError') { throw 'Startup stderr capture missing' }
+          if ($ps -notmatch 'RedirectStandardOutput') { throw 'Startup stdout capture missing' }
+          if ($ps -match 'Stop-Process') { throw 'Recovery V1 must not stop processes' }
+          if ($ps -match '8082') { throw ':8082 reference forbidden' }
+          Write-Host 'STATIC SAFETY PASS'
+
+      - name: Build package
+        shell: powershell
+        run: |
+          $pkg = 'Riverwood_5SEP_RECOVER_WRITER_8085_NATIVE_LAUNCHER_V1'
+          $dir = Join-Path $PWD $pkg
+          New-Item -ItemType Directory -Path $dir -Force | Out-Null
+          Copy-Item 'tools/RECOVER_WRITER_8085_NATIVE_LAUNCHER_V1.bat' (Join-Path $dir 'RECOVER_WRITER_8085_NATIVE_LAUNCHER_V1.bat')
+          Copy-Item 'tools/recover_writer_8085_native_launcher_v1.ps1' (Join-Path $dir 'recover_writer_8085_native_launcher_v1.ps1')
+          Copy-Item 'tools/README_RECOVER_WRITER_8085_NATIVE_LAUNCHER_V1.txt' (Join-Path $dir 'README.txt')
+          $zip = Join-Path $PWD ($pkg + '.zip')
+          Compress-Archive -Path $dir -DestinationPath $zip -Force
+          $sha = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Path ($pkg + '.sha256.txt') -Value $sha -Encoding ascii
+          Write-Host ('ZIP SHA256=' + $sha)
+
+      - name: Verify package
+        shell: powershell
+        run: |
+          $pkg = 'Riverwood_5SEP_RECOVER_WRITER_8085_NATIVE_LAUNCHER_V1'
+          $out = Join-Path $PWD 'verify_recovery'
+          Expand-Archive -Path ($pkg + '.zip') -DestinationPath $out -Force
+          $base = Join-Path $out $pkg
+          foreach ($f in @('RECOVER_WRITER_8085_NATIVE_LAUNCHER_V1.bat','recover_writer_8085_native_launcher_v1.ps1','README.txt')) {
+            if (-not (Test-Path (Join-Path $base $f))) { throw ('Missing packaged file: ' + $f) }
+          }
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Join-Path $base 'recover_writer_8085_native_launcher_v1.ps1'), [ref]$null, [ref]$errors)
+          if ($errors.Count -gt 0) { throw 'Packaged PS51 parse failed' }
+          Write-Host 'ZIP VERIFY PASS'
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Riverwood_5SEP_RECOVER_WRITER_8085_NATIVE_LAUNCHER_V1
+          path: |
+            Riverwood_5SEP_RECOVER_WRITER_8085_NATIVE_LAUNCHER_V1.zip
+            Riverwood_5SEP_RECOVER_WRITER_8085_NATIVE_LAUNCHER_V1.sha256.txt
+
+      - name: Publish package
+        shell: powershell
+        run: |
+          $pkg = 'Riverwood_5SEP_RECOVER_WRITER_8085_NATIVE_LAUNCHER_V1'
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Copy-Item ($pkg + '.zip') (Join-Path 'release' ($pkg + '.zip')) -Force
+          Copy-Item ($pkg + '.sha256.txt') (Join-Path 'release' ($pkg + '.sha256.txt')) -Force
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release/
+          if (git diff --cached --quiet) { Write-Host 'No release changes'; exit 0 }
+          git commit -m 'Publish writer 8085 native recovery V1 [skip ci]'
+          git push
