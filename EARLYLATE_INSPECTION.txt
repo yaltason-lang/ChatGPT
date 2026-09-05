@@ -1,0 +1,1911 @@
+SHA256_RAW=308707c238ffa451bbdd7b80480246fe6a7d96b53e6a3f5a0c7d90bd0cda3c64
+SHA256_NORMALIZED_LF=868768e343d732daabaa13f2aeb2ed4bd56a16ac72aa29f0cbdefa74303a4c32
+SHA256_NORMALIZED_CRLF=308707c238ffa451bbdd7b80480246fe6a7d96b53e6a3f5a0c7d90bd0cda3c64
+LINES=8274
+
+FUNCTION INDEX:
+_hms_booking_price_list_mapping: 107-115
+_available_room_tokens_for_period: 801-816
+_stay_time_availability_for_plans: 819-900
+_assign_guest_list_to_room_plan: 1879-1955
+_request_hms_booking_draft: 2563-2631
+_request_hms_booking_sidecar_action: 2634-2682
+_request_hms_booking_verify: 2685-2693
+_request_hms_booking_prepare: 2696-2704
+_request_hms_booking_reserve: 2707-2832
+_auto_allocate: 3341-3402
+_allocation_summary: 3405-3483
+_allocation_failure_message: 3486-3499
+_manual_allocation_from_form: 3588-3593
+_room_plan_key: 3596-3597
+_build_room_plan: 3600-3701
+_manual_day_room_plan_from_form: 3745-3833
+_manual_selected_room_plan_from_form: 3837-3928
+_manual_room_plan_counts: 3930-3939
+_manual_summary_from_room_plan: 3964-3995
+_validate_room_plan: 4042-4082
+_quote_room_plan: 4119-4276
+_daily_allocation_snapshot: 4829-4857
+_render_calculator: 4968-5031
+calculator_page: 5035-5651
+_quote_saved_availability_by_day: 5811-5835
+_hydrate_saved_room_plan_live: 5981-6023
+_clear_hms_booking_preflight: 6336-6368
+_hms_hydrate_autofix_room_plan_live: 6859-6898
+_hms_booking_payload: 7032-7169
+_hms_booking_preflight: 7208-7343
+_hms_booking_state: 7346-7430
+_hms_booking_new_reservation_url: 7432-7436
+hms_booking_bridge_pending: 7453-7500
+hms_booking_bridge_report: 7504-7570
+hms_booking_bridge_diagnostic: 7574-7599
+_render_quote_detail_response: 7602-7652
+quote_detail: 7655-8217
+
+MATCH LINES:
+170: def _portable_standard_bed_usage(room_plan: Iterable[Dict[str, Any]]) -> int:
+173:         for room in room_plan
+384:     'early_checkin', 'late_checkout',
+801: def _available_room_tokens_for_period(arrival: str, departure: str) -> Tuple[set, Dict[str, str], List[str]]:
+819: def _stay_time_availability_for_plans(
+820:     *, arrival: str, departure: str, first_room_plan: List[Dict[str, Any]], last_room_plan: List[Dict[str, Any]],
+844:         flag = 'early_checkin' if kind == 'early' else 'late_checkout'
+854:         available, _labels, warnings = _available_room_tokens_for_period(start, end)
+898:     resolve('early', first_room_plan or [], bool(request_early_all), True)
+899:     resolve('late', last_room_plan or [], bool(request_late_all), False)
+905:     early_checkin: bool = False, late_checkout: bool = False,
+920:         label = 'Ранній заїзд' if kind == 'early_checkin' else 'Пізній виїзд'
+953:     if days and early_checkin:
+954:         early_total = apply_to_day(days[0], 'early_checkin', DEFAULT_EARLY_CHECKIN_PERCENT, early_set)
+955:     if days and late_checkout:
+956:         late_total = apply_to_day(days[-1], 'late_checkout', DEFAULT_LATE_CHECKOUT_PERCENT, late_set)
+965:     pricing['early_checkin'] = bool(early_checkin and (early_set is None or len(early_set) > 0))
+966:     pricing['late_checkout'] = bool(late_checkout and (late_set is None or len(late_set) > 0))
+967:     pricing['early_checkin_requested'] = bool(early_checkin)
+968:     pricing['late_checkout_requested'] = bool(late_checkout)
+969:     pricing['early_checkin_percent'] = _money_float(DEFAULT_EARLY_CHECKIN_PERCENT)
+970:     pricing['late_checkout_percent'] = _money_float(DEFAULT_LATE_CHECKOUT_PERCENT)
+971:     pricing['early_checkin_total'] = _money_float(early_total)
+972:     pricing['late_checkout_total'] = _money_float(late_total)
+978:     pricing['early_checkin_availability'] = {
+985:     pricing['late_checkout_availability'] = {
+1001:         info = pricing.get('early_checkin_availability') if kind == 'early' else pricing.get('late_checkout_availability')
+1015:             'type': 'early_checkin_unavailable' if kind == 'early' else 'late_checkout_unavailable',
+1022:     add_stay_time_block('early', bool(early_checkin))
+1023:     add_stay_time_block('late', bool(late_checkout))
+1416:     *, arrival: str, departure: str, room_plan: List[Dict[str, Any]],
+1432:         one = _quote_room_plan(
+1433:             arrival=day, departure=next_day, room_plan=room_plan,
+1463: def _daily_booking_restrictions(day_results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+1473:     for idx, day in enumerate(day_results):
+1497:             first_day = day_results[start_i]
+1498:             last_day = day_results[end_i]
+1544:                     d = str(day_results[idx].get('date') or '')
+1545:                     emit('stop_sale', f'{category} · номер {label}: продаж на ніч {d} → {day_results[idx].get("next_date")} закритий.', True)
+1550: def _compose_daily_pricing(day_results: List[Dict[str, Any]], restrictions: List[Dict[str, Any]]) -> Dict[str, Any]:
+1556:     for day in day_results:
+1595:         'daily_calculations': day_results,
+1879: def _assign_guest_list_to_room_plan(room_plan: List[Dict[str, Any]], guests: List[Dict[str, Any]], placement_mode: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+1881:     plan = [dict(r) for r in room_plan]
+2187:         early_checkin INTEGER NOT NULL DEFAULT 0,
+2188:         late_checkout INTEGER NOT NULL DEFAULT 0,
+2257:         'early_checkin': "INTEGER NOT NULL DEFAULT 0",
+2258:         'late_checkout': "INTEGER NOT NULL DEFAULT 0",
+3596: def _room_plan_key(room_type_id: int, position: int) -> str:
+3600: def _build_room_plan(summary: Dict[str, Any], adults: int, children: int, paid_children_total: int = 0, form=None) -> List[Dict[str, Any]]:
+3614:             key = _room_plan_key(_ival(row.get('room_type_id'), 0), idx + 1)
+3745: def _manual_day_room_plan_from_form(
+3763:     early_values = list(form.getlist(prefix + '_early_checkin'))
+3764:     late_values = list(form.getlist(prefix + '_late_checkout'))
+3807:             'early_checkin': bool(early),
+3808:             'late_checkout': bool(late),
+3813:         _validate_room_plan(out, adults, children, paid_children)
+3832:         _validate_room_plan(out, total_a, total_c, total_pc)
+3837: def _manual_selected_room_plan_from_form(
+3924:             'manual_source': 'selected_rooms', 'early_checkin': False, 'late_checkout': False,
+3927:     _validate_room_plan(out, adults, children, paid_children)
+3930: def _manual_room_plan_counts(room_plan: List[Dict[str, Any]]) -> Dict[str, int]:
+3931:     adults = sum(_ival(r.get('adults'), 0, minimum=0) for r in room_plan or [])
+3932:     children = sum(_ival(r.get('children'), 0, minimum=0) for r in room_plan or [])
+3933:     paid_children = sum(_ival(r.get('paid_children'), 0, minimum=0) for r in room_plan or [])
+3964: def _manual_summary_from_room_plan(rows: List[Dict[str, Any]], room_plan: List[Dict[str, Any]], guests: int) -> Dict[str, Any]:
+3966:     for room in room_plan:
+3987:         'used_rooms': len(room_plan),
+3993:         'standard_extra_beds_used': _portable_standard_bed_usage(room_plan),
+4002:     posted = _manual_day_room_plan_from_form(
+4017:         _validate_room_plan(locked, adults, children, paid_children)
+4033:     generated = _build_room_plan(summary, rem_a, rem_c, paid_children_total=rem_pc, form=None)
+4039:     _validate_room_plan(combined, adults, children, paid_children)
+4042: def _validate_room_plan(room_plan: List[Dict[str, Any]], adults: int, children: int, paid_children_total: int = 0) -> None:
+4043:     if not room_plan:
+4045:     total_adults = sum(_ival(r.get('adults'), 0, minimum=0) for r in room_plan)
+4046:     total_children = sum(_ival(r.get('children'), 0, minimum=0) for r in room_plan)
+4049:     total_paid_children = sum(_ival(r.get('paid_children'), 0, minimum=0) for r in room_plan)
+4052:     for room in room_plan:
+4076:     portable_used = _portable_standard_bed_usage(room_plan)
+4119: def _quote_room_plan(*, arrival: str, departure: str, room_plan: List[Dict[str, Any]], price_list_id: int = 0, rate_plan_id: int = 0, response_cache: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
+4141:     for room in room_plan:
+4399:                         q = _quote_room_plan(
+4400:                             arrival=arrival, departure=departure, room_plan=[room],
+4516:     room_plan: List[Dict[str, Any]] = []
+4523:             room_plan.append({
+4524:                 'key': _room_plan_key(rid, idx + 1),
+4545:     _validate_room_plan(room_plan, target[0], target[1], target[2])
+4546:     pricing = _quote_room_plan(
+4547:         arrival=arrival, departure=departure, room_plan=room_plan,
+4551:     summary['standard_extra_beds_used'] = _portable_standard_bed_usage(room_plan)
+4556:         'room_plan': room_plan,
+4588:         plan, unassigned = _assign_guest_list_to_room_plan(exact['room_plan'], guests, placement_mode)
+4590:             _validate_room_plan(plan, adults, children, paid_children)
+4591:             pricing = _quote_room_plan(
+4592:                 arrival=arrival, departure=departure, room_plan=plan,
+4598:                 exact['room_plan'] = plan
+4657:         plan = _build_room_plan(summary, adults, children, paid_children_total=paid_children, form=None)
+4658:         plan, unassigned = _assign_guest_list_to_room_plan(plan, guests, placement_mode)
+4662:             _validate_room_plan(plan, adults, children, paid_children)
+4663:             pricing = _quote_room_plan(
+4664:                 arrival=arrival, departure=departure, room_plan=plan,
+4676:                 'allocation': allocation, 'summary': summary, 'room_plan': plan,
+4717:     day_results: List[Dict[str, Any]] = []
+4728:             day_results.append({
+4732:                 'room_plan': [],
+4757:                 room_plan = _manual_selected_room_plan_from_form(
+4761:                 room_plan = _refill_day_around_locked_rooms(
+4766:                 room_plan = _manual_day_room_plan_from_form(
+4770:             summary = _manual_summary_from_room_plan(rows, room_plan, guest_count)
+4772:             for r in room_plan:
+4775:             pricing = _quote_room_plan(
+4776:                 arrival=day_date, departure=next_date, room_plan=room_plan,
+4789:             room_plan = optimized['room_plan']
+4797:             room_plan = _build_room_plan(summary, adults, children, paid_children_total=paid_children, form=None)
+4798:             _validate_room_plan(room_plan, adults, children, paid_children)
+4799:             pricing = _quote_room_plan(
+4800:                 arrival=day_date, departure=next_date, room_plan=room_plan,
+4808:         day_results.append({
+4810:             'room_plan': room_plan, 'pricing': pricing, 'pricing_daily': statement,
+4817:     restrictions = _daily_booking_restrictions(day_results)
+4818:     composite_pricing = _compose_daily_pricing(day_results, restrictions)
+4826:     return day_results, composite_pricing, cache_payload, warnings
+4829: def _daily_allocation_snapshot(day_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+4832:     for day in day_results:
+4855:             'standard_extra_beds_used': _portable_standard_bed_usage(day.get('room_plan') or []),
+4877:             for room in day.get('room_plan') or []:
+4946:         'early_checkin': _ival(q.get('early_checkin'), 0, minimum=0),
+4947:         'late_checkout': _ival(q.get('late_checkout'), 0, minimum=0),
+4987:         'early_checkin': 0,
+4988:         'late_checkout': 0,
+5090:     early_checkin = _bool_form('early_checkin')
+5091:     late_checkout = _bool_form('late_checkout')
+5115:         'early_checkin': early_checkin,
+5116:         'late_checkout': late_checkout,
+5196:             day_results, pricing, cache_payload, day_warnings = _calculate_varying_daily_group(
+5208:             allocation_snapshot = _daily_allocation_snapshot(day_results)
+5213:             max_used_rooms = max((_ival((x.get('summary') or {}).get('used_rooms'), 0) for x in day_results), default=0)
+5214:             max_capacity = max((_ival((x.get('summary') or {}).get('allocated_capacity'), 0) for x in day_results), default=0)
+5215:             max_spare = max((_ival((x.get('summary') or {}).get('spare_places'), 0) for x in day_results), default=0)
+5216:             min_available = min((_ival(x.get('available_whole_stay'), 0) for x in day_results if _ival(x.get('guest_count'), 0) > 0), default=0)
+5218:             first_plan = list((day_results[0].get('room_plan') or [])) if day_results else []
+5219:             last_plan = list((day_results[-1].get('room_plan') or [])) if day_results else []
+5220:             stay_time = _stay_time_availability_for_plans(
+5221:                 arrival=arrival, departure=departure, first_room_plan=first_plan, last_room_plan=last_plan,
+5222:                 request_early_all=bool(early_checkin), request_late_all=bool(late_checkout), strict_explicit=bool(manual_mode),
+5227:                 early_checkin=bool(early_checkin), late_checkout=bool(late_checkout),
+5249:                 'early_checkin': early_checkin,
+5250:                 'late_checkout': late_checkout,
+5263:                 'room_plan': [],
+5273:                 'standard_extra_beds_used': max((_portable_standard_bed_usage(x.get('room_plan') or []) for x in day_results), default=0),
+5285:                 'daily_calculations': day_results,
+5314:                         'room_plan': x.get('room_plan') or [],
+5316:                     for x in day_results
+5328:                     'early_checkin': early_checkin,
+5329:                     'late_checkout': late_checkout,
+5435:             room_plan = optimized['room_plan']
+5448:             room_plan = _build_room_plan(
+5456:                 room_plan, unassigned_guests = _assign_guest_list_to_room_plan(room_plan, guest_list, placement_mode)
+5474:             'early_checkin': early_checkin,
+5475:             'late_checkout': late_checkout,
+5487:             'room_plan': room_plan,
+5496:             'standard_extra_beds_used': _portable_standard_bed_usage(room_plan),
+5509:                 _validate_room_plan(room_plan, adults, children, paid_children)
+5510:                 result['standard_extra_beds_used'] = _portable_standard_bed_usage(room_plan)
+5512:                 pricing = prepriced or _quote_room_plan(
+5515:                     room_plan=room_plan,
+5524:                         arrival=arrival, departure=departure, room_plan=room_plan,
+5538:                 stay_time = _stay_time_availability_for_plans(
+5539:                     arrival=arrival, departure=departure, first_room_plan=room_plan, last_room_plan=room_plan,
+5540:                     request_early_all=bool(early_checkin), request_late_all=bool(late_checkout), strict_explicit=False,
+5545:                     early_checkin=bool(early_checkin), late_checkout=bool(late_checkout),
+5582:                 'standard_extra_beds_used': _portable_standard_bed_usage(room_plan),
+5597:                 'early_checkin': early_checkin,
+5598:                 'late_checkout': late_checkout,
+5614:                 'occupancy_json': json.dumps(room_plan, ensure_ascii=False, separators=(',', ':')),
+5791:         plan = item.get('room_plan') if isinstance(item.get('room_plan'), list) else []
+5851:     day_results: List[Dict[str, Any]] = []
+5898:         summary = _manual_summary_from_room_plan(rows, plan, guest_count)
+5899:         day_results.append({
+5909:             'rows': rows, 'room_plan': plan, 'room_options': options,
+5934:     max_used_rooms = max((_ival((x.get('summary') or {}).get('used_rooms'), 0) for x in day_results), default=0)
+5935:     max_capacity = max((_ival((x.get('summary') or {}).get('allocated_capacity'), 0) for x in day_results), default=0)
+5936:     max_shortage = max((_ival((x.get('summary') or {}).get('shortage'), 0) for x in day_results), default=0)
+5937:     max_spare = max((_ival((x.get('summary') or {}).get('spare_places'), 0) for x in day_results), default=0)
+5938:     min_available = min((_ival(x.get('available_whole_stay'), 0) for x in day_results if _ival(x.get('guest_count'), 0) > 0), default=_ival(q.get('available_whole_stay'), 0, minimum=0))
+5954:         'placement_label': 'Змінюється по днях' if len(schedule) > 1 else str(day_results[0].get('placement_label') or ''),
+5956:         'early_checkin': bool(_ival(q.get('early_checkin'), 0)), 'late_checkout': bool(_ival(q.get('late_checkout'), 0)),
+5964:         'room_plan': [], 'rows': [], 'pricing': pricing, 'pricing_breakdown': [], 'pricing_daily': pricing_daily,
+5968:         'standard_extra_beds_used': max((_portable_standard_bed_usage(x.get('room_plan') or []) for x in day_results), default=0),
+5974:         'daily_mode': True, 'daily_composition': schedule, 'daily_calculations': day_results,
+5981: def _hydrate_saved_room_plan_live(
+6018:             **({'early_checkin': bool(old.get('early_checkin'))} if 'early_checkin' in old else {}),
+6019:             **({'late_checkout': bool(old.get('late_checkout'))} if 'late_checkout' in old else {}),
+6022:     _validate_room_plan(out, adults, children, paid_children)
+6026: def _manual_editor_context_for_quote(row: Any, day_date: str, *, room_plan: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+6039:     current = [dict(x) for x in (room_plan if room_plan is not None else saved_map.get(day_date, []))]
+6052:             early_set, _labels, ww = _available_room_tokens_for_period(ep_a, ep_d)
+6061:             late_set, _labels, ww = _available_room_tokens_for_period(lp_a, lp_d)
+6068:         opt['early_checkin_available'] = bool(is_first and not early_error and token in early_set)
+6069:         opt['late_checkout_available'] = bool(is_last and not late_error and token in late_set)
+6070:         opt['early_checkin_period'] = early_period
+6071:         opt['late_checkout_period'] = late_period
+6078:         r['early_checkin_available'] = bool(live.get('early_checkin_available'))
+6079:         r['late_checkout_available'] = bool(live.get('late_checkout_available'))
+6082:         if is_first and 'early_checkin' not in r:
+6083:             r['early_checkin'] = bool(_ival(q.get('early_checkin'), 0) and r['early_checkin_available'])
+6084:         if is_last and 'late_checkout' not in r:
+6085:             r['late_checkout'] = bool(_ival(q.get('late_checkout'), 0) and r['late_checkout_available'])
+6102:         'early_checkin_period': early_period,
+6103:         'late_checkout_period': late_period,
+6104:         'early_checkin_error': early_error,
+6105:         'late_checkout_error': late_error,
+6118:     early = list(form.getlist(prefix + '_early_checkin'))
+6119:     late = list(form.getlist(prefix + '_late_checkout'))
+6133:             'early_checkin': str(early[idx] if idx < len(early) else '0').strip() in ('1','true','yes','on'),
+6134:             'late_checkout': str(late[idx] if idx < len(late) else '0').strip() in ('1','true','yes','on'),
+6152:     day_results: List[Dict[str, Any]] = []
+6171:             day_results.append({
+6172:                 **day, 'rows': [], 'room_plan': [], 'room_options': [],
+6191:                 room_plan = _refill_day_around_locked_rooms(
+6200:                 room_plan = _manual_day_room_plan_from_form(
+6204:                 manual_counts = _manual_room_plan_counts(room_plan)
+6218:             room_plan = _hydrate_saved_room_plan_live(
+6223:         summary = _manual_summary_from_room_plan(rows, room_plan, guest_count)
+6224:         pricing = _quote_room_plan(
+6225:             arrival=d, departure=nd, room_plan=room_plan,
+6231:         day_results.append({
+6232:             **day, 'rows': rows, 'room_plan': room_plan, 'room_options': _daily_room_options(rows),
+6239:     if not any(str(x.get('date') or '') == day_date for x in day_results):
+6241:     restrictions = _daily_booking_restrictions(day_results)
+6242:     pricing = _compose_daily_pricing(day_results, restrictions)
+6244:     first_plan = list((day_results[0].get('room_plan') or [])) if day_results else []
+6245:     last_plan = list((day_results[-1].get('room_plan') or [])) if day_results else []
+6246:     stay_time = _stay_time_availability_for_plans(
+6248:         first_room_plan=first_plan, last_room_plan=last_plan,
+6249:         request_early_all=bool(_ival(q.get('early_checkin'), 0)),
+6250:         request_late_all=bool(_ival(q.get('late_checkout'), 0)),
+6255:         early_checkin=bool(stay_time.get('early_requested_count')),
+6256:         late_checkout=bool(stay_time.get('late_requested_count')),
+6266:     allocation = _daily_allocation_snapshot(day_results)
+6268:         {'date': x.get('date'), 'next_date': x.get('next_date'), 'room_plan': x.get('room_plan') or []}
+6269:         for x in day_results
+6274:     max_capacity = max((_ival((x.get('summary') or {}).get('allocated_capacity'), 0) for x in day_results), default=0)
+6275:     max_spare = max((_ival((x.get('summary') or {}).get('spare_places'), 0) for x in day_results), default=0)
+6276:     min_available = min((_ival(x.get('available_whole_stay'), 0) for x in day_results if _ival(x.get('guest_count'), 0) > 0), default=0)
+6281:     selected = next(x for x in day_results if str(x.get('date') or '') == day_date)
+6283:         'day_results': day_results,
+6310:         'early_checkin': 1 if pricing.get('early_checkin_requested') else 0,
+6311:         'late_checkout': 1 if pricing.get('late_checkout_requested') else 0,
+6692:     quote_early = bool(_ival(q.get('early_checkin'), 0))
+6693:     quote_late = bool(_ival(q.get('late_checkout'), 0))
+6694:     explicit_early = any(bool(x.get('early_checkin')) for x in first_plan)
+6695:     explicit_late = any(bool(x.get('late_checkout')) for x in last_plan)
+6701:         early_allowed, _labels, _warnings = _available_room_tokens_for_period((a - timedelta(days=1)).isoformat(), a.isoformat())
+6704:         late_allowed, _labels, _warnings = _available_room_tokens_for_period(d.isoformat(), (d + timedelta(days=1)).isoformat())
+6729:                 profile['_hms_requires_early'] = bool(source.get('early_checkin')) if explicit_early else True
+6733:                 profile['_hms_requires_late'] = bool(source.get('late_checkout')) if explicit_late else True
+6773:                     item['early_checkin'] = bool(profile.get('_hms_requires_early'))
+6774:                 elif 'early_checkin' in profile:
+6775:                     item['early_checkin'] = bool(profile.get('early_checkin'))
+6777:                     item['late_checkout'] = bool(profile.get('_hms_requires_late'))
+6778:                 elif 'late_checkout' in profile:
+6779:                     item['late_checkout'] = bool(profile.get('late_checkout'))
+6803:         _validate_room_plan(finished, expected_a, expected_c, expected_pc)
+6859: def _hms_hydrate_autofix_room_plan_live(
+6889:             'manual_locked', 'manual_source', 'early_checkin', 'late_checkout',
+6897:     _validate_room_plan(out, adults, children, paid_children)
+6913:     day_results: List[Dict[str, Any]] = []
+6924:             day_results.append({
+6925:                 **day, 'rows': [], 'room_plan': [], 'room_options': [],
+6941:         room_plan = _hms_hydrate_autofix_room_plan_live(
+6949:         summary = _manual_summary_from_room_plan(rows, room_plan, guest_count)
+6950:         pricing = _quote_room_plan(
+6951:             arrival=d, departure=nd, room_plan=room_plan,
+6957:         day_results.append({
+6958:             **day, 'rows': rows, 'room_plan': room_plan, 'room_options': _daily_room_options(rows),
+6965:     restrictions = _daily_booking_restrictions(day_results)
+6966:     pricing = _compose_daily_pricing(day_results, restrictions)
+6968:     first_plan = list((day_results[0].get('room_plan') or [])) if day_results else []
+6969:     last_plan = list((day_results[-1].get('room_plan') or [])) if day_results else []
+6970:     stay_time = _stay_time_availability_for_plans(
+6972:         first_room_plan=first_plan, last_room_plan=last_plan,
+6973:         request_early_all=bool(_ival(q.get('early_checkin'), 0)),
+6974:         request_late_all=bool(_ival(q.get('late_checkout'), 0)),
+6979:         early_checkin=bool(stay_time.get('early_requested_count')),
+6980:         late_checkout=bool(stay_time.get('late_requested_count')),
+6990:     allocation = _daily_allocation_snapshot(day_results)
+6992:         {'date': x.get('date'), 'next_date': x.get('next_date'), 'room_plan': x.get('room_plan') or []}
+6993:         for x in day_results
+6995:     after_plans = {str(x.get('date') or ''): list(x.get('room_plan') or []) for x in day_results}
+7003:     max_capacity = max((_ival((x.get('summary') or {}).get('allocated_capacity'), 0) for x in day_results), default=0)
+7004:     max_spare = max((_ival((x.get('summary') or {}).get('spare_places'), 0) for x in day_results), default=0)
+7005:     min_available = min((_ival(x.get('available_whole_stay'), 0) for x in day_results if _ival(x.get('guest_count'), 0) > 0), default=0)
+7014:         'day_results': day_results,
+7111:                 'early_checkin': bool(room.get('early_checkin')),
+7112:                 'late_checkout': bool(room.get('late_checkout')),
+7147:         'early_checkin': bool(q.get('early_checkin')),
+7148:         'late_checkout': bool(q.get('late_checkout')),
+7303:         if payload.get('early_checkin'):
+7304:             explicitly_selected = [x for x in first_rooms if x.get('early_checkin')]
+7310:                 check_window(room, start, end, 'early_checkin_previous_night')
+7311:         if payload.get('late_checkout'):
+7312:             explicitly_selected = [x for x in last_rooms if x.get('late_checkout')]
+7318:                 check_window(room, start, end, 'late_checkout_next_night')
+7964:         if detail_action == 'hms_booking_preflight':
+8056:                 selected_plan = list((calc.get('selected_day_result') or {}).get('room_plan') or [])
+8057:                 editor = _manual_editor_context_for_quote(row, day_date, room_plan=selected_plan)
+8063:                     str(x.get('date') or ''): list(x.get('room_plan') or [])
+8083:                     'early_checkin_total': (calc.get('pricing') or {}).get('early_checkin_total'),
+8084:                     'late_checkout_total': (calc.get('pricing') or {}).get('late_checkout_total'),
+8085:                     'early_checkin_availability': dict((calc.get('pricing') or {}).get('early_checkin_availability') or {}),
+8086:                     'late_checkout_availability': dict((calc.get('pricing') or {}).get('late_checkout_availability') or {}),
+
+RELEVANT FUNCTION SOURCES:
+
+==========================================================================================
+FUNCTION _available_room_tokens_for_period 801-816
+==========================================================================================
+def _available_room_tokens_for_period(arrival: str, departure: str) -> Tuple[set, Dict[str, str], List[str]]:
+    """Return physical RoomIDs that are actually free for one adjacent-night period."""
+    raw = _request_pms_live(arrival, departure)
+    payload, warnings = _validate_payload(raw, arrival, departure)
+    tokens = set()
+    labels: Dict[str, str] = {}
+    for cat in payload.get('categories') or []:
+        ids = list(cat.get('room_ids') or [])
+        room_labels = list(cat.get('room_labels') or [])
+        for idx, room_id in enumerate(ids):
+            token = str(room_id).strip()
+            if not token:
+                continue
+            tokens.add(token)
+            labels[token] = str(room_labels[idx]) if idx < len(room_labels) else token
+    return tokens, labels, warnings
+
+==========================================================================================
+FUNCTION _stay_time_availability_for_plans 819-900
+==========================================================================================
+def _stay_time_availability_for_plans(
+    *, arrival: str, departure: str, first_room_plan: List[Dict[str, Any]], last_room_plan: List[Dict[str, Any]],
+    request_early_all: bool = False, request_late_all: bool = False, strict_explicit: bool = False,
+) -> Dict[str, Any]:
+    """Resolve early-check-in / late-check-out per physical room.
+
+    Early check-in is possible only when the same physical room is free on the night
+    immediately before arrival. Late check-out is possible only when the same physical
+    room is free on the night immediately after departure. Explicit manual selections are
+    rejected when the adjacent availability does not allow the service. A global
+    "for all available rooms" request is safely reduced to only the rooms that pass the
+    live adjacent-night check.
+    """
+    a, d, _ = _parse_dates(arrival, departure)
+    out: Dict[str, Any] = {
+        'early_room_labels': [], 'late_room_labels': [],
+        'early_room_ids': [], 'late_room_ids': [],
+        'early_unavailable_labels': [], 'late_unavailable_labels': [],
+        'early_checked_period': '', 'late_checked_period': '',
+        'early_requested_count': 0, 'late_requested_count': 0,
+        'early_available_count': 0, 'late_available_count': 0,
+        'warnings': [],
+    }
+
+    def resolve(kind: str, plan: List[Dict[str, Any]], request_all: bool, before: bool) -> None:
+        flag = 'early_checkin' if kind == 'early' else 'late_checkout'
+        explicit = any(flag in room for room in plan or [])
+        if not plan or (not request_all and not explicit):
+            return
+        if before:
+            start = (a - timedelta(days=1)).isoformat()
+            end = a.isoformat()
+        else:
+            start = d.isoformat()
+            end = (d + timedelta(days=1)).isoformat()
+        available, _labels, warnings = _available_room_tokens_for_period(start, end)
+        out['warnings'].extend(warnings)
+        out[f'{kind}_checked_period'] = f'{start} → {end}'
+
+        requested: List[Dict[str, Any]] = []
+        for room in plan or []:
+            if explicit:
+                if bool(room.get(flag)):
+                    requested.append(room)
+            elif request_all:
+                requested.append(room)
+        out[f'{kind}_requested_count'] = len(requested)
+
+        selected: List[Dict[str, Any]] = []
+        unavailable: List[Dict[str, Any]] = []
+        requested_tokens = {str(r.get('room_id') or '').strip() for r in requested}
+        for room in plan or []:
+            token = str(room.get('room_id') or '').strip()
+            is_requested = token in requested_tokens and bool(token)
+            is_available = bool(token and token in available)
+            # Persist an explicit per-room state so future revisions do not have to
+            # infer it from the old quote-level boolean.
+            room[flag] = bool(is_requested and is_available)
+            room[f'{flag}_available'] = is_available
+            if is_requested:
+                if is_available:
+                    selected.append(room)
+                else:
+                    unavailable.append(room)
+
+        if strict_explicit and explicit and unavailable:
+            names = ', '.join(str(r.get('room_label') or r.get('room_id') or '?') for r in unavailable[:12])
+            service = 'Ранній заїзд' if kind == 'early' else 'Пізній виїзд'
+            when = 'попередню ніч' if kind == 'early' else 'наступну ніч'
+            raise ValueError(
+                f'{service} неможливий для номерів {names}: ці фізичні номери зайняті у {when} '
+                f'({start} → {end}). Виберіть інші номери або вимкніть послугу для них.'
+            )
+
+        out[f'{kind}_room_ids'] = [r.get('room_id') for r in selected]
+        out[f'{kind}_room_labels'] = [str(r.get('room_label') or r.get('room_id') or '') for r in selected]
+        out[f'{kind}_unavailable_labels'] = [str(r.get('room_label') or r.get('room_id') or '') for r in unavailable]
+        out[f'{kind}_available_count'] = len(selected)
+
+    resolve('early', first_room_plan or [], bool(request_early_all), True)
+    resolve('late', last_room_plan or [], bool(request_late_all), False)
+    return out
+
+==========================================================================================
+FUNCTION resolve 843-896
+==========================================================================================
+    def resolve(kind: str, plan: List[Dict[str, Any]], request_all: bool, before: bool) -> None:
+        flag = 'early_checkin' if kind == 'early' else 'late_checkout'
+        explicit = any(flag in room for room in plan or [])
+        if not plan or (not request_all and not explicit):
+            return
+        if before:
+            start = (a - timedelta(days=1)).isoformat()
+            end = a.isoformat()
+        else:
+            start = d.isoformat()
+            end = (d + timedelta(days=1)).isoformat()
+        available, _labels, warnings = _available_room_tokens_for_period(start, end)
+        out['warnings'].extend(warnings)
+        out[f'{kind}_checked_period'] = f'{start} → {end}'
+
+        requested: List[Dict[str, Any]] = []
+        for room in plan or []:
+            if explicit:
+                if bool(room.get(flag)):
+                    requested.append(room)
+            elif request_all:
+                requested.append(room)
+        out[f'{kind}_requested_count'] = len(requested)
+
+        selected: List[Dict[str, Any]] = []
+        unavailable: List[Dict[str, Any]] = []
+        requested_tokens = {str(r.get('room_id') or '').strip() for r in requested}
+        for room in plan or []:
+            token = str(room.get('room_id') or '').strip()
+            is_requested = token in requested_tokens and bool(token)
+            is_available = bool(token and token in available)
+            # Persist an explicit per-room state so future revisions do not have to
+            # infer it from the old quote-level boolean.
+            room[flag] = bool(is_requested and is_available)
+            room[f'{flag}_available'] = is_available
+            if is_requested:
+                if is_available:
+                    selected.append(room)
+                else:
+                    unavailable.append(room)
+
+        if strict_explicit and explicit and unavailable:
+            names = ', '.join(str(r.get('room_label') or r.get('room_id') or '?') for r in unavailable[:12])
+            service = 'Ранній заїзд' if kind == 'early' else 'Пізній виїзд'
+            when = 'попередню ніч' if kind == 'early' else 'наступну ніч'
+            raise ValueError(
+                f'{service} неможливий для номерів {names}: ці фізичні номери зайняті у {when} '
+                f'({start} → {end}). Виберіть інші номери або вимкніть послугу для них.'
+            )
+
+        out[f'{kind}_room_ids'] = [r.get('room_id') for r in selected]
+        out[f'{kind}_room_labels'] = [str(r.get('room_label') or r.get('room_id') or '') for r in selected]
+        out[f'{kind}_unavailable_labels'] = [str(r.get('room_label') or r.get('room_id') or '') for r in unavailable]
+        out[f'{kind}_available_count'] = len(selected)
+
+==========================================================================================
+FUNCTION calculator_page 5035-5651
+==========================================================================================
+def calculator_page():
+    ensure_accommodation_schema()
+    if request.method == 'GET':
+        edit_quote_id = (request.args.get('edit_quote_id') or '').strip()
+        if edit_quote_id:
+            row = _db().execute('SELECT * FROM accommodation_quotes WHERE quote_id=?', (edit_quote_id,)).fetchone()
+            if not row:
+                abort(404)
+            values = _quote_edit_form_values(row)
+            values['edit_day'] = (request.args.get('edit_day') or '').strip()
+            try:
+                saved_result = _saved_quote_result_for_edit(row)
+                return _render_calculator(result=saved_result, form_values=values)
+            except Exception as exc:
+                return _render_calculator(
+                    form_values=values,
+                    error='Не вдалося відкрити збережені фізичні номери для ручного редагування: ' + _pricing_error_for_manager(exc),
+                )
+        return _render_calculator()
+
+    action = (request.form.get('action') or 'calculate').strip()
+    if action in ('quote', 'save_priced'):
+        action = 'save' if action == 'save_priced' else 'manual'
+
+    arrival = (request.form.get('arrival') or '').strip()
+    departure = (request.form.get('departure') or '').strip()
+    guest_input_mode = (request.form.get('guest_input_mode') or 'count').strip()
+    if guest_input_mode not in GUEST_INPUT_MODE_LABELS:
+        guest_input_mode = 'count'
+    guest_list = _guest_list_from_form()
+    guest_list_source = (request.form.get('guest_list_source') or '').strip()
+    uploaded = request.files.get('guest_file')
+    if uploaded and getattr(uploaded, 'filename', ''):
+        try:
+            imported_guests = _guest_list_from_upload(uploaded)
+            guest_list = _merge_guest_lists(guest_list, imported_guests)
+            guest_list_source = f'file:{Path(str(uploaded.filename)).name}'
+        except Exception as import_exc:
+            guest_list_source = f'error:{import_exc}'
+
+    adults_raw = request.form.get('adults')
+    children_raw = request.form.get('children')
+    if guest_input_mode == 'list' and guest_list and not guest_list_source.startswith('error:'):
+        adults, children, paid_children = _guest_counts(guest_list)
+    else:
+        if adults_raw in (None, '') and children_raw in (None, ''):
+            adults = _ival(request.form.get('guest_count'), 0, minimum=0)
+            children = 0
+        else:
+            adults = _ival(adults_raw, 0, minimum=0)
+            children = _ival(children_raw, 0, minimum=0)
+        paid_children = _ival(request.form.get('paid_children'), 0, minimum=0)
+    guests = adults + children
+    placement_mode = (request.form.get('placement_mode') or 'standard').strip()
+    include_extra = _bool_form('include_extra')
+    early_checkin = _bool_form('early_checkin')
+    late_checkout = _bool_form('late_checkout')
+    strategy = (request.form.get('strategy') or 'priority').strip()
+    capacity_probe_mode = (request.form.get('capacity_probe_mode') or 'max').strip()
+    if capacity_probe_mode not in CAPACITY_PROBE_LABELS:
+        capacity_probe_mode = 'max'
+    discount_percent = _percent_decimal(request.form.get('discount_percent'))
+    price_list_id = _default_quote_price_list_id()
+    rate_plan_id, rate_plan_resolution = _effective_quote_rate_plan_id(price_list_id)
+    edit_quote_id = (request.form.get('edit_quote_id') or '').strip()
+    edit_quote_row = None
+    if edit_quote_id:
+        edit_quote_row = _db().execute('SELECT * FROM accommodation_quotes WHERE quote_id=?', (edit_quote_id,)).fetchone()
+        if not edit_quote_row:
+            return _render_calculator(error='Пропозицію для редагування не знайдено.')
+
+    form_values = {
+        'arrival': arrival,
+        'departure': departure,
+        'guest_count': guests,
+        'adults': adults,
+        'children': children,
+        'paid_children': paid_children,
+        'placement_mode': placement_mode,
+        'include_extra': include_extra,
+        'early_checkin': early_checkin,
+        'late_checkout': late_checkout,
+        'strategy': strategy,
+        'capacity_probe_mode': capacity_probe_mode,
+        'client_name': (request.form.get('client_name') or '').strip(),
+        'title': (request.form.get('title') or '').strip(),
+        'discount_percent': f'{discount_percent:.2f}',
+        'commercial_note': (request.form.get('commercial_note') or '').strip(),
+        'manager_note': (request.form.get('manager_note') or '').strip(),
+        'guest_note': (request.form.get('guest_note') or '').strip(),
+        'guest_input_mode': guest_input_mode,
+        'guest_list': guest_list,
+        'guest_list_source': guest_list_source,
+        'daily_composition': [],
+        'edit_quote_id': edit_quote_id,
+        'edit_quote_number': str(edit_quote_row['quote_number']) if edit_quote_row else '',
+        'edit_revision_no': _ival(edit_quote_row['revision_no'], 1, minimum=1) if edit_quote_row else 0,
+        'edit_day': (request.form.get('edit_day') or '').strip(),
+        'edit_current_commercial_total': _money_float(_money_decimal(edit_quote_row['commercial_total'])) if edit_quote_row else 0,
+        'edit_current_currency': str(edit_quote_row['currency'] or 'UAH') if edit_quote_row else 'UAH',
+        'rate_plan_resolution': rate_plan_resolution,
+    }
+
+    try:
+        if guest_list_source.startswith('error:'):
+            raise ValueError(guest_list_source.split(':', 1)[1])
+        _, _, nights = _parse_dates(arrival, departure)
+        if str(request.form.get('capacity_probe') or '').strip() == '1':
+            probe = _capacity_probe_for_period(arrival, departure, capacity_probe_mode)
+            return _render_calculator(form_values=form_values, capacity_probe=probe)
+        if guest_input_mode == 'list' and not guest_list:
+            raise ValueError('Для розрахунку за списком додайте гостей вручну або імпортуйте Excel/CSV.')
+        if guests <= 0:
+            raise ValueError('Кількість гостей повинна бути більше нуля.')
+        if paid_children > children:
+            raise ValueError('Кількість платних дітей не може перевищувати загальну кількість дітей.')
+        if placement_mode not in PLACEMENT_LABELS:
+            raise ValueError('Невідомий режим розміщення.')
+        if strategy not in STRATEGY_LABELS:
+            strategy = 'priority'
+
+        daily_schedule = _daily_schedule_from_form(
+            arrival, departure, adults=adults, children=children, paid_children=paid_children,
+            placement_mode=placement_mode, include_extra=include_extra, form=request.form,
+        )
+        form_values['daily_composition'] = daily_schedule
+        daily_varies = _daily_schedule_varies(daily_schedule)
+        # v5.305: always use the per-night calculation path, even for a one-night stay.
+        # The per-night path is the canonical path that exposes the exact physical-room
+        # manual editor (add / remove / replace room + recalculate).  Previously a one-night
+        # stay fell back to the legacy category-count editor, which effectively removed the
+        # manager's physical-room corrections from the main calculator.
+        daily_mode = True
+        manual_plan_active = str(request.form.get('manual_plan_active') or '').strip() in ('1','true','yes','on')
+        manual_day = (request.form.get('manual_day') or '').strip()
+        manual_mode = ''
+        if action == 'daily_refill':
+            manual_mode = 'refill'
+        elif action == 'daily_manual_rooms' or (action == 'save' and manual_plan_active and str(request.form.get('manual_editor_mode') or '') == 'selected_rooms'):
+            manual_mode = 'selected_rooms'
+        elif action == 'daily_manual' or (action == 'save' and manual_plan_active):
+            manual_mode = 'manual'
+
+        cache_id = (request.form.get('cache_id') or '').strip()
+        source_mode = 'live'
+        warnings: List[str] = []
+
+        if daily_mode:
+            cached_payloads: Dict[str, Dict[str, Any]] = {}
+            cache_obj = None
+            use_cached_daily = action in ('manual', 'save') and not manual_mode
+            if use_cached_daily:
+                cache_obj = _load_cache(cache_id)
+                if not cache_obj or not isinstance(cache_obj.get('payload'), dict) or not cache_obj['payload'].get('_daily_mode'):
+                    raise ValueError('Денний розрахунок вже недоступний. Натисніть «Розрахувати проживання» ще раз.')
+                if cache_obj['row']['arrival'] != arrival or cache_obj['row']['departure'] != departure:
+                    raise ValueError('Дати змінилися. Натисніть «Розрахувати проживання» ще раз.')
+                for item in cache_obj['payload'].get('days') or []:
+                    if isinstance(item, dict) and isinstance(item.get('payload'), dict):
+                        cached_payloads[str(item.get('date') or '')] = item['payload']
+
+            day_results, pricing, cache_payload, day_warnings = _calculate_varying_daily_group(
+                schedule=daily_schedule,
+                strategy=strategy,
+                price_list_id=price_list_id,
+                rate_plan_id=rate_plan_id,
+                cached_payloads=cached_payloads,
+                manual_mode=manual_mode, manual_day=manual_day, form=request.form,
+                force_live=bool(manual_mode),
+            )
+            warnings.extend(day_warnings)
+            if not use_cached_daily:
+                cache_id = _save_cache(cache_payload, arrival, departure, warnings, is_live=True)
+            allocation_snapshot = _daily_allocation_snapshot(day_results)
+            max_guests = max((_ival(x.get('guest_count'), 0) for x in daily_schedule), default=0)
+            max_adults = max((_ival(x.get('adults'), 0) for x in daily_schedule), default=0)
+            max_children = max((_ival(x.get('children'), 0) for x in daily_schedule), default=0)
+            max_paid_children = max((_ival(x.get('paid_children'), 0) for x in daily_schedule), default=0)
+            max_used_rooms = max((_ival((x.get('summary') or {}).get('used_rooms'), 0) for x in day_results), default=0)
+            max_capacity = max((_ival((x.get('summary') or {}).get('allocated_capacity'), 0) for x in day_results), default=0)
+            max_spare = max((_ival((x.get('summary') or {}).get('spare_places'), 0) for x in day_results), default=0)
+            min_available = min((_ival(x.get('available_whole_stay'), 0) for x in day_results if _ival(x.get('guest_count'), 0) > 0), default=0)
+            pricing_daily = _pricing_daily_statement(pricing, arrival, departure)
+            first_plan = list((day_results[0].get('room_plan') or [])) if day_results else []
+            last_plan = list((day_results[-1].get('room_plan') or [])) if day_results else []
+            stay_time = _stay_time_availability_for_plans(
+                arrival=arrival, departure=departure, first_room_plan=first_plan, last_room_plan=last_plan,
+                request_early_all=bool(early_checkin), request_late_all=bool(late_checkout), strict_explicit=bool(manual_mode),
+            )
+            warnings.extend(stay_time.get('warnings') or [])
+            pricing, pricing_daily = _apply_stay_time_surcharges(
+                pricing, pricing_daily,
+                early_checkin=bool(early_checkin), late_checkout=bool(late_checkout),
+                early_room_labels=stay_time.get('early_room_labels') or [],
+                late_room_labels=stay_time.get('late_room_labels') or [],
+                availability_meta=stay_time,
+            )
+            pricing.update(_tourist_tax_estimate(daily_schedule))
+            result = {
+                'cache_id': cache_id,
+                'arrival': arrival,
+                'departure': departure,
+                'nights': nights,
+                'guest_count': max_guests,
+                'adults': max_adults,
+                'children': max_children,
+                'paid_children': max_paid_children,
+                'guest_input_mode': guest_input_mode,
+                'guest_list': guest_list,
+                'guest_list_source': guest_list_source,
+                'unassigned_guests': [],
+                'placement_mode': placement_mode,
+                'placement_label': 'Змінюється по днях',
+                'include_extra': include_extra,
+                'early_checkin': early_checkin,
+                'late_checkout': late_checkout,
+                'strategy': strategy,
+                'strategy_label': STRATEGY_LABELS.get(strategy, strategy),
+                'price_list_id': price_list_id,
+                'rate_plan_id': (pricing.get('rate_plan_ids') or [rate_plan_id])[0] if len(pricing.get('rate_plan_ids') or []) == 1 else rate_plan_id,
+                'rate_plan_resolution': rate_plan_resolution,
+                'available_whole_stay': min_available,
+                'active_rooms_whole_stay': min_available,
+                'occupied_rooms_any_overlap': 0,
+                'source': str(pricing.get('source') or 'Система бронювання'),
+                'generated_at': str(pricing.get('generated_at') or ''),
+                'source_mode': 'live',
+                'warnings': warnings,
+                'room_plan': [],
+                'rows': [],
+                'pricing': pricing,
+                'pricing_breakdown': [],
+                'pricing_daily': pricing_daily,
+                'pricing_error': '',
+                'commercial': _commercial_terms(pricing.get('commercial_accommodation_total', pricing['hms_accommodation_total']), discount_percent),
+                'booking_restrictions': list(pricing.get('booking_restrictions') or []),
+                'booking_allowed': bool(pricing.get('booking_allowed', True)),
+                'optimizer': {'mode': 'daily_varying_group'},
+                'standard_extra_beds_used': max((_portable_standard_bed_usage(x.get('room_plan') or []) for x in day_results), default=0),
+                'standard_extra_bed_pool_limit': _standard_extra_bed_pool(),
+                'placement_error': '',
+                'used_rooms': max_used_rooms,
+                'allocated_capacity': max_capacity,
+                'configured_capacity': max_capacity,
+                'placed_guests': max_guests,
+                'shortage': 0,
+                'spare_places': max_spare,
+                'fits': bool(pricing.get('booking_allowed', True)),
+                'daily_mode': True,
+                'daily_composition': daily_schedule,
+                'daily_calculations': day_results,
+                'allocation_snapshot': allocation_snapshot,
+                'manual_plan_active': bool(manual_mode),
+                'manual_day': manual_day or form_values.get('edit_day') or '',
+            }
+            if edit_quote_row and result.get('commercial'):
+                previous_total = _money_decimal(edit_quote_row['commercial_total'])
+                new_total = _money_decimal(result['commercial'].get('commercial_total'))
+                result['previous_commercial_total'] = _money_float(previous_total)
+                result['commercial_delta'] = _money_float(new_total - previous_total)
+
+            if action == 'save':
+                if result.get('booking_allowed') is False:
+                    result['pricing_error'] = 'Пропозицію не збережено: ' + (
+                        _booking_restriction_failure_message(
+                            result.get('booking_restrictions') or [],
+                            arrival=arrival,
+                            departure=departure,
+                            selected_nights=nights,
+                        ) or 'вибрані умови бронювання не виконані.'
+                    )
+                    return _render_calculator(result=result, form_values=form_values)
+
+                conn = _db()
+                commercial = result['commercial']
+                occupancy_daily = [
+                    {
+                        'date': x.get('date'),
+                        'next_date': x.get('next_date'),
+                        'room_plan': x.get('room_plan') or [],
+                    }
+                    for x in day_results
+                ]
+                cache_for_save = cache_obj or _load_cache(cache_id)
+                quote_data = {
+                    'client_name': form_values['client_name'],
+                    'title': form_values['title'],
+                    'arrival': arrival,
+                    'departure': departure,
+                    'nights': nights,
+                    'guest_count': max_guests,
+                    'placement_mode': placement_mode,
+                    'include_extra': include_extra,
+                    'early_checkin': early_checkin,
+                    'late_checkout': late_checkout,
+                    'strategy': strategy,
+                    'availability_source': result['source'],
+                    'availability_fetched_at': cache_for_save['row']['fetched_at'] if cache_for_save else _now(),
+                    'availability_json': json.dumps(cache_payload, ensure_ascii=False, separators=(',', ':')),
+                    'allocation_json': json.dumps(allocation_snapshot, ensure_ascii=False, separators=(',', ':')),
+                    'available_whole_stay': result['available_whole_stay'],
+                    'configured_capacity': max_capacity,
+                    'placed_guests': max_guests,
+                    'shortage': 0,
+                    'spare_places': max_spare,
+                    'manager_note': form_values['manager_note'],
+                    'guest_note': form_values['guest_note'],
+                    'tariff_status': 'live_hms',
+                    'adults': max_adults,
+                    'children': max_children,
+                    'occupancy_json': json.dumps(occupancy_daily, ensure_ascii=False, separators=(',', ':')),
+                    'pricing_json': json.dumps(pricing, ensure_ascii=False, separators=(',', ':')),
+                    'pricing_source': str(pricing.get('source') or ''),
+                    'pricing_generated_at': str(pricing.get('generated_at') or '') or None,
+                    'price_list_id': price_list_id or None,
+                    'rate_plan_id': _ival(result.get('rate_plan_id'), 0, minimum=0) or None,
+                    'include_tourist_tax': 0,
+                    'stay_total_before_tourist_tax': pricing.get('stay_total_before_tourist_tax'),
+                    'tourist_tax_total': pricing.get('tourist_tax_total'),
+                    'stay_total': pricing.get('stay_total'),
+                    'currency': str(pricing.get('currency') or ''),
+                    'commercial_discount_percent': commercial['discount_percent'],
+                    'commercial_discount_amount': commercial['discount_amount'],
+                    'commercial_total': commercial['commercial_total'],
+                    'commercial_note': form_values['commercial_note'],
+                    'guest_input_mode': guest_input_mode,
+                    'guest_list_json': json.dumps(guest_list, ensure_ascii=False, separators=(',', ':')),
+                    'guest_list_source': guest_list_source,
+                    'daily_plan_json': _daily_schedule_json(daily_schedule),
+                }
+                manual_change_summary = _manual_room_change_summary(
+                    edit_quote_row['occupancy_json'] if edit_quote_row else '[]', occupancy_daily
+                ) if manual_mode else ''
+                quote_id, quote_number, revision_no = _persist_quote_version(
+                    conn, quote_data, edit_quote_id=edit_quote_id,
+                    revision_kind='manual_recalculation' if manual_mode else 'recalculation'
+                )
+                conn.commit()
+                _audit(
+                    'accommodation_quote', quote_id, 'recalculated' if edit_quote_id else 'created',
+                    new_value=f'{quote_number}; v{revision_no}',
+                    reason=(
+                        f'{arrival}..{departure}; daily room plan; manual={bool(manual_mode)}; max_guests={max_guests}; discount={commercial["discount_percent"]}%'
+                        + (f'; room_changes={manual_change_summary}' if manual_change_summary else '')
+                    )
+                )
+                if edit_quote_id:
+                    flash(f'Пропозицію {quote_number} перераховано та збережено як версію {revision_no}. Попередня версія залишилась в історії.', 'success')
+                else:
+                    flash(f'Пропозицію {quote_number} збережено. Склад групи та розрахунок зафіксовані окремо по кожній ночі.', 'success')
+                return redirect(url_for('accommodation.quote_detail', quote_id=quote_id))
+
+            return _render_calculator(result=result, form_values=form_values)
+
+        if action in ('manual', 'save'):
+            cache_obj = _load_cache(cache_id)
+            if not cache_obj:
+                raise ValueError('Live availability за цим розрахунком вже недоступна. Натисніть «Розрахувати проживання» ще раз.')
+            if cache_obj['row']['arrival'] != arrival or cache_obj['row']['departure'] != departure:
+                raise ValueError('Дати змінилися. Натисніть «Розрахувати проживання» ще раз.')
+            payload = cache_obj['payload']
+            warnings = [x for x in str(cache_obj['row']['warning'] or '').splitlines() if x]
+            source_mode = 'live' if int(cache_obj['row']['is_live'] or 0) else 'cache'
+        else:
+            try:
+                raw_payload = _request_pms_live(arrival, departure)
+                payload, warnings = _validate_payload(raw_payload, arrival, departure)
+                conn = _db()
+                _sync_categories_from_payload(conn, payload)
+                cache_id = _save_cache(payload, arrival, departure, warnings, is_live=True)
+                source_mode = 'live'
+            except Exception as live_exc:
+                cached = _last_good_cache(arrival, departure)
+                if not cached:
+                    raise
+                payload = cached['payload']
+                warnings = [f'Live PMS тимчасово недоступний: {live_exc}. Показана остання успішна наявність від {cached["row"]["fetched_at"]}; ціна не розраховується зі snapshot.']
+                cache_id = _save_cache(payload, arrival, departure, warnings, is_live=False)
+                source_mode = 'cache'
+
+        rows = _category_rows(payload, placement_mode, bool(include_extra))
+        optimizer_meta: Dict[str, Any] = {}
+        prepriced: Optional[Dict[str, Any]] = None
+        unassigned_guests: List[Dict[str, Any]] = []
+
+        if action not in ('manual', 'save') and strategy == 'best_price' and source_mode == 'live':
+            if guest_input_mode == 'list' and guest_list:
+                optimized = _best_price_plan_with_guest_list(
+                    rows, guest_list, arrival=arrival, departure=departure, placement_mode=placement_mode,
+                    adults=adults, children=children, paid_children=paid_children,
+                    price_list_id=price_list_id, rate_plan_id=rate_plan_id,
+                )
+            else:
+                optimized = _best_price_count_plan(
+                    rows, arrival=arrival, departure=departure,
+                    adults=adults, children=children, paid_children=paid_children,
+                    price_list_id=price_list_id, rate_plan_id=rate_plan_id,
+                )
+            allocation = optimized['allocation']
+            summary = optimized['summary']
+            room_plan = optimized['room_plan']
+            prepriced = optimized['pricing']
+            optimizer_meta = optimized.get('optimizer') or {}
+            unassigned_guests = optimized.get('unassigned_guests') or []
+        else:
+            if action in ('manual', 'save'):
+                allocation = _manual_allocation_from_form(rows)
+            else:
+                # If live pricing is unavailable, a best-price request may still show
+                # physical availability, but it cannot claim a cheapest price.
+                structural_strategy = 'priority' if strategy == 'best_price' else strategy
+                allocation = _auto_allocate(rows, guests, structural_strategy, placement_mode)
+            summary = _allocation_summary(rows, allocation, guests)
+            room_plan = _build_room_plan(
+                summary,
+                adults,
+                children,
+                paid_children_total=paid_children,
+                form=request.form if action in ('manual', 'save') else None,
+            )
+            if guest_input_mode == 'list' and guest_list:
+                room_plan, unassigned_guests = _assign_guest_list_to_room_plan(room_plan, guest_list, placement_mode)
+
+        result: Dict[str, Any] = {
+            'cache_id': cache_id,
+            'arrival': arrival,
+            'departure': departure,
+            'nights': nights,
+            'guest_count': guests,
+            'adults': adults,
+            'children': children,
+            'paid_children': paid_children,
+            'guest_input_mode': guest_input_mode,
+            'guest_list': guest_list,
+            'guest_list_source': guest_list_source,
+            'unassigned_guests': unassigned_guests,
+            'placement_mode': placement_mode,
+            'placement_label': PLACEMENT_LABELS[placement_mode],
+            'include_extra': include_extra,
+            'early_checkin': early_checkin,
+            'late_checkout': late_checkout,
+            'strategy': strategy,
+            'strategy_label': STRATEGY_LABELS.get(strategy, strategy),
+            'price_list_id': price_list_id,
+            'rate_plan_id': rate_plan_id,
+            'available_whole_stay': _ival(payload.get('available_whole_stay'), 0, minimum=0),
+            'active_rooms_whole_stay': _ival(payload.get('active_rooms_whole_stay'), 0, minimum=0),
+            'occupied_rooms_any_overlap': _ival(payload.get('occupied_rooms_any_overlap'), 0, minimum=0),
+            'source': str(payload.get('source') or 'PMS Availability Sidecar'),
+            'generated_at': str(payload.get('generated_at') or ''),
+            'source_mode': source_mode,
+            'warnings': warnings,
+            'room_plan': room_plan,
+            'pricing': None,
+            'pricing_breakdown': [],
+            'pricing_daily': {'days': [], 'period_extras': [], 'has_daily_rates': False, 'currency': 'UAH'},
+            'pricing_error': '',
+            'commercial': None,
+            'booking_restrictions': [],
+            'booking_allowed': True,
+            'optimizer': optimizer_meta,
+            'standard_extra_beds_used': _portable_standard_bed_usage(room_plan),
+            'standard_extra_bed_pool_limit': _standard_extra_bed_pool(),
+            'placement_error': _allocation_failure_message(summary),
+            'daily_mode': False,
+            'daily_composition': daily_schedule,
+            **summary,
+        }
+
+        if result['fits'] and source_mode == 'live':
+            try:
+                if guest_input_mode == 'list' and unassigned_guests:
+                    names = ', '.join(g.get('full_name') or '?' for g in unassigned_guests[:8])
+                    raise ValueError(f'Не вдалося розмістити всіх гостей зі списку за заданими умовами: {names}. Відкоригуйте побажання або вибір номерів.')
+                _validate_room_plan(room_plan, adults, children, paid_children)
+                result['standard_extra_beds_used'] = _portable_standard_bed_usage(room_plan)
+                result['standard_extra_bed_pool_limit'] = _standard_extra_bed_pool()
+                pricing = prepriced or _quote_room_plan(
+                    arrival=arrival,
+                    departure=departure,
+                    room_plan=room_plan,
+                    price_list_id=price_list_id,
+                    rate_plan_id=rate_plan_id,
+                )
+                result['pricing'] = pricing
+                result['pricing_breakdown'] = _pricing_category_breakdown(pricing, nights)
+                result['pricing_daily'] = _pricing_daily_statement(pricing, arrival, departure)
+                if nights > 1 and not _daily_statement_is_complete(result['pricing_daily'], nights):
+                    pricing['daily_statement'] = _exact_daily_statement_for_static_plan(
+                        arrival=arrival, departure=departure, room_plan=room_plan,
+                        price_list_id=price_list_id, rate_plan_id=rate_plan_id,
+                    )
+                    result['pricing_daily'] = _pricing_daily_statement(pricing, arrival, departure)
+                for idx, day_item in enumerate(result['pricing_daily'].get('days') or []):
+                    if idx < len(daily_schedule):
+                        day_item['adults'] = daily_schedule[idx]['adults']
+                        day_item['children'] = daily_schedule[idx]['children']
+                        day_item['guest_count'] = daily_schedule[idx]['guest_count']
+                        day_item['placement_mode'] = daily_schedule[idx]['placement_mode']
+                        day_item['placement_label'] = daily_schedule[idx]['placement_label']
+                        day_item['include_extra'] = daily_schedule[idx]['include_extra']
+                if result['pricing_daily'].get('days'):
+                    pricing['daily_statement'] = result['pricing_daily']
+                stay_time = _stay_time_availability_for_plans(
+                    arrival=arrival, departure=departure, first_room_plan=room_plan, last_room_plan=room_plan,
+                    request_early_all=bool(early_checkin), request_late_all=bool(late_checkout), strict_explicit=False,
+                )
+                result['warnings'].extend(stay_time.get('warnings') or [])
+                pricing, result['pricing_daily'] = _apply_stay_time_surcharges(
+                    pricing, result['pricing_daily'],
+                    early_checkin=bool(early_checkin), late_checkout=bool(late_checkout),
+                    early_room_labels=stay_time.get('early_room_labels') or [],
+                    late_room_labels=stay_time.get('late_room_labels') or [],
+                    availability_meta=stay_time,
+                )
+                result['booking_restrictions'] = list(pricing.get('booking_restrictions') or [])
+                result['booking_allowed'] = bool(pricing.get('booking_allowed', True))
+                result['fits'] = bool(result.get('fits')) and result['booking_allowed']
+                result['commercial'] = _commercial_terms(pricing.get('commercial_accommodation_total', pricing['hms_accommodation_total']), discount_percent)
+            except Exception as pricing_exc:
+                result['pricing_error'] = _pricing_error_for_manager(pricing_exc)
+        elif result['fits'] and source_mode != 'live':
+            result['pricing_error'] = 'Наявність показана зі збереженого знімка. Для вартості потрібне актуальне підключення до системи бронювання.'
+
+        if action == 'save':
+            if not result.get('pricing') or not result.get('commercial'):
+                result['pricing_error'] = result.get('pricing_error') or 'Пропозицію не збережено: немає підтвердженої актуальної вартості.'
+                return _render_calculator(result=result, form_values=form_values)
+            if result.get('booking_allowed') is False:
+                result['pricing_error'] = 'Пропозицію не збережено: ' + (_booking_restriction_failure_message(result.get('booking_restrictions') or [], arrival=arrival, departure=departure, selected_nights=nights) or 'вибрані умови бронювання не виконані.')
+                return _render_calculator(result=result, form_values=form_values)
+
+            conn = _db()
+            allocation_snapshot = {
+                'rows': [
+                    {
+                        'room_type_id': r['room_type_id'], 'category': r['category'], 'guest_label': r['guest_label'],
+                        'available_rooms': r['available_rooms'], 'allocated_rooms': r['allocated_rooms'],
+                        'base_capacity': r['base_capacity'], 'extra_capacity': r['extra_capacity'],
+                        'capacity_per_room': r['capacity_per_room'], 'allocated_capacity': r['allocated_capacity'],
+                        'room_ids': r['room_ids'], 'room_labels': r['room_labels'],
+                    } for r in summary['rows']
+                ],
+                'used_rooms': summary['used_rooms'],
+                'allocated_capacity': summary['allocated_capacity'],
+                'shortage': summary['shortage'],
+                'spare_places': summary['spare_places'],
+                'standard_extra_beds_used': _portable_standard_bed_usage(room_plan),
+                'standard_extra_bed_pool_limit': _standard_extra_bed_pool(),
+            }
+            pricing = result['pricing']
+            commercial = result['commercial']
+            cache_for_save = _load_cache(cache_id)
+            quote_data = {
+                'client_name': form_values['client_name'],
+                'title': form_values['title'],
+                'arrival': arrival,
+                'departure': departure,
+                'nights': nights,
+                'guest_count': guests,
+                'placement_mode': placement_mode,
+                'include_extra': include_extra,
+                'early_checkin': early_checkin,
+                'late_checkout': late_checkout,
+                'strategy': strategy,
+                'availability_source': result['source'],
+                'availability_fetched_at': cache_for_save['row']['fetched_at'] if cache_for_save else _now(),
+                'availability_json': json.dumps(payload, ensure_ascii=False, separators=(',', ':')),
+                'allocation_json': json.dumps(allocation_snapshot, ensure_ascii=False, separators=(',', ':')),
+                'available_whole_stay': result['available_whole_stay'],
+                'configured_capacity': result['configured_capacity'],
+                'placed_guests': result['placed_guests'],
+                'shortage': result['shortage'],
+                'spare_places': result['spare_places'],
+                'manager_note': form_values['manager_note'],
+                'guest_note': form_values['guest_note'],
+                'tariff_status': 'live_hms',
+                'adults': adults,
+                'children': children,
+                'occupancy_json': json.dumps(room_plan, ensure_ascii=False, separators=(',', ':')),
+                'pricing_json': json.dumps(pricing, ensure_ascii=False, separators=(',', ':')),
+                'pricing_source': str(pricing.get('source') or ''),
+                'pricing_generated_at': str(pricing.get('generated_at') or '') or None,
+                'price_list_id': price_list_id or None,
+                'rate_plan_id': rate_plan_id or None,
+                'include_tourist_tax': 0,
+                'stay_total_before_tourist_tax': pricing.get('stay_total_before_tourist_tax'),
+                'tourist_tax_total': pricing.get('tourist_tax_total'),
+                'stay_total': pricing.get('stay_total'),
+                'currency': str(pricing.get('currency') or ''),
+                'commercial_discount_percent': commercial['discount_percent'],
+                'commercial_discount_amount': commercial['discount_amount'],
+                'commercial_total': commercial['commercial_total'],
+                'commercial_note': form_values['commercial_note'],
+                'guest_input_mode': guest_input_mode,
+                'guest_list_json': json.dumps(guest_list, ensure_ascii=False, separators=(',', ':')),
+                'guest_list_source': guest_list_source,
+                'daily_plan_json': _daily_schedule_json(daily_schedule),
+            }
+            quote_id, quote_number, revision_no = _persist_quote_version(
+                conn, quote_data, edit_quote_id=edit_quote_id, revision_kind='recalculation'
+            )
+            conn.commit()
+            _audit(
+                'accommodation_quote', quote_id, 'recalculated' if edit_quote_id else 'created',
+                new_value=f'{quote_number}; v{revision_no}',
+                reason=f'{arrival}..{departure}; guests={guests}; live_hms; discount={commercial["discount_percent"]}%'
+            )
+            if edit_quote_id:
+                flash(f'Пропозицію {quote_number} перераховано та збережено як версію {revision_no}. Попередня версія залишилась в історії.', 'success')
+            else:
+                flash(f'Пропозицію {quote_number} збережено. Базова актуальна ціна зафіксована; комерційну знижку можна змінювати у збереженій пропозиції.', 'success')
+            return redirect(url_for('accommodation.quote_detail', quote_id=quote_id))
+
+        return _render_calculator(result=result, form_values=form_values)
+    except Exception as exc:
+        return _render_calculator(error=_pricing_error_for_manager(exc), form_values=form_values)
+
+==========================================================================================
+FUNCTION _manual_editor_context_for_quote 6026-6106
+==========================================================================================
+def _manual_editor_context_for_quote(row: Any, day_date: str, *, room_plan: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    schedule = _quote_daily_schedule_from_row(row)
+    day = next((dict(x) for x in schedule if str(x.get('date') or '') == day_date), None)
+    if not day:
+        raise ValueError('Вибрану ніч не знайдено у цій пропозиції.')
+    raw = _request_pms_live(day_date, str(day.get('next_date') or ''))
+    payload, warnings = _validate_payload(raw, day_date, str(day.get('next_date') or ''))
+    conn = _db()
+    _sync_categories_from_payload(conn, payload)
+    conn.commit()
+    rows = _category_rows(payload, str(day.get('placement_mode') or 'standard'), bool(day.get('include_extra')))
+    options = _daily_room_options(rows)
+    saved_map = _quote_occupancy_by_day(row)
+    current = [dict(x) for x in (room_plan if room_plan is not None else saved_map.get(day_date, []))]
+    q = _row_dict(row)
+    is_first = str(day_date) == str(q.get('arrival') or '')
+    is_last = str(day.get('next_date') or '') == str(q.get('departure') or '')
+    early_set: set = set()
+    late_set: set = set()
+    early_period = late_period = ''
+    early_error = late_error = ''
+    if is_first:
+        a = date.fromisoformat(day_date)
+        ep_a, ep_d = (a - timedelta(days=1)).isoformat(), a.isoformat()
+        early_period = f'{ep_a} → {ep_d}'
+        try:
+            early_set, _labels, ww = _available_room_tokens_for_period(ep_a, ep_d)
+            warnings.extend(ww)
+        except Exception as exc:
+            early_error = _pricing_error_for_manager(exc)
+    if is_last:
+        dep = date.fromisoformat(str(day.get('next_date') or ''))
+        lp_a, lp_d = dep.isoformat(), (dep + timedelta(days=1)).isoformat()
+        late_period = f'{lp_a} → {lp_d}'
+        try:
+            late_set, _labels, ww = _available_room_tokens_for_period(lp_a, lp_d)
+            warnings.extend(ww)
+        except Exception as exc:
+            late_error = _pricing_error_for_manager(exc)
+
+    for opt in options:
+        token = str(opt.get('room_id') or '')
+        opt['early_checkin_available'] = bool(is_first and not early_error and token in early_set)
+        opt['late_checkout_available'] = bool(is_last and not late_error and token in late_set)
+        opt['early_checkin_period'] = early_period
+        opt['late_checkout_period'] = late_period
+    option_by_id = {str(x.get('room_id')): x for x in options}
+    option_ids = set(option_by_id)
+    missing = []
+    for r in current:
+        token = str(r.get('room_id') or '')
+        live = option_by_id.get(token) or {}
+        r['early_checkin_available'] = bool(live.get('early_checkin_available'))
+        r['late_checkout_available'] = bool(live.get('late_checkout_available'))
+        # Old v5.308 quote-level flags become a safe per-room default only when the room
+        # passes the new adjacent-night availability check.
+        if is_first and 'early_checkin' not in r:
+            r['early_checkin'] = bool(_ival(q.get('early_checkin'), 0) and r['early_checkin_available'])
+        if is_last and 'late_checkout' not in r:
+            r['late_checkout'] = bool(_ival(q.get('late_checkout'), 0) and r['late_checkout_available'])
+        if token and token not in option_ids:
+            missing.append({
+                'room_id': r.get('room_id'), 'room_label': str(r.get('room_label') or token),
+                'category': str(r.get('category') or ROOM_TYPE_NAMES.get(_ival(r.get('room_type_id'), 0), '')),
+            })
+    return {
+        'day': day,
+        'day_date': day_date,
+        'next_date': str(day.get('next_date') or ''),
+        'current_plan': current,
+        'room_options': options,
+        'missing_rooms': missing,
+        'warnings': warnings,
+        'next_revision_no': _ival(q.get('revision_no'), 1, minimum=1) + 1,
+        'is_first_night': is_first,
+        'is_last_night': is_last,
+        'early_checkin_period': early_period,
+        'late_checkout_period': late_period,
+        'early_checkin_error': early_error,
+        'late_checkout_error': late_error,
+    }
+
+==========================================================================================
+FUNCTION _recalculate_quote_with_manual_day 6140-6298
+==========================================================================================
+def _recalculate_quote_with_manual_day(row: Any, day_date: str, form, *, refill: bool = False) -> Dict[str, Any]:
+    """Revalidate every night live, while changing one day's exact physical-room plan."""
+    q = _row_dict(row)
+    schedule = _quote_daily_schedule_from_row(row)
+    if not schedule:
+        raise ValueError('У пропозиції немає збереженого денного плану.')
+    saved_by_day = _quote_occupancy_by_day(row)
+    price_list_id = _ival(q.get('price_list_id'), DEFAULT_BASE_PRICE_LIST_ID, minimum=0)
+    rate_plan_id = _ival(q.get('rate_plan_id'), 0, minimum=0)
+    if rate_plan_id <= 0:
+        rate_plan_id, _rate_plan_resolution = _effective_quote_rate_plan_id(price_list_id)
+    conn = _db()
+    day_results: List[Dict[str, Any]] = []
+    cache_days: List[Dict[str, Any]] = []
+    warnings: List[str] = []
+
+    for day_src in schedule:
+        day = dict(day_src)
+        d = str(day.get('date') or '')
+        nd = str(day.get('next_date') or '')
+        adults = _ival(day.get('adults'), 0, minimum=0)
+        children = _ival(day.get('children'), 0, minimum=0)
+        paid_children = _ival(day.get('paid_children'), 0, minimum=0)
+        guest_count = adults + children
+        original_composition = {
+            'adults': adults, 'children': children, 'paid_children': paid_children,
+            'guest_count': guest_count,
+        }
+        if not d or not nd:
+            raise ValueError('У денному плані відсутні дати.')
+        if guest_count <= 0:
+            day_results.append({
+                **day, 'rows': [], 'room_plan': [], 'room_options': [],
+                'summary': {'rows': [], 'used_rooms': 0, 'allocated_capacity': 0, 'configured_capacity': 0, 'shortage': 0, 'spare_places': 0, 'fits': True},
+                'pricing': {'ok': True, 'rooms': [], 'hms_accommodation_total': 0, 'stay_total_before_tourist_tax': 0, 'tourist_tax_total': 0, 'stay_total': 0, 'currency': str(q.get('currency') or 'UAH'), 'booking_restrictions': [], 'booking_allowed': True},
+                'pricing_daily': {'days': [{'date': d, 'next_date': nd, 'date_label': day.get('date_label'), 'next_date_label': day.get('next_date_label'), 'lines': [], 'total': 0, 'base_total': 0, 'extra_total': 0}], 'period_extras': [], 'has_daily_rates': True, 'currency': str(q.get('currency') or 'UAH')},
+                'available_whole_stay': 0, 'active_rooms_whole_stay': 0,
+            })
+            continue
+
+        raw = _request_pms_live(d, nd)
+        payload, day_warnings = _validate_payload(raw, d, nd)
+        _sync_categories_from_payload(conn, payload)
+        cache_days.append({'date': d, 'next_date': nd, 'payload': payload})
+        warnings.extend([f'{day.get("date_label")}: {x}' for x in day_warnings])
+        rows = _category_rows(payload, str(day.get('placement_mode') or 'standard'), bool(day.get('include_extra')))
+
+        if d == day_date:
+            if refill:
+                # Refill means: preserve the declared composition for this night, keep
+                # locked rooms, and automatically allocate the remaining guests.
+                room_plan = _refill_day_around_locked_rooms(
+                    day_date=d, rows=rows, adults=adults, children=children, paid_children=paid_children,
+                    placement_mode=str(day.get('placement_mode') or 'standard'), strategy=str(q.get('strategy') or 'priority'), form=form,
+                )
+            else:
+                # Inline manual editing is composition-aware.  Removing a room removes
+                # the guests entered in that row from this night; adding/editing a row
+                # changes this night's composition.  The header schedule is synchronized
+                # from the room rows instead of rejecting the edit as a mismatch.
+                room_plan = _manual_day_room_plan_from_form(
+                    day_date=d, rows=rows, adults=adults, children=children, paid_children=paid_children,
+                    form=form, require_full=False, allow_composition_change=True,
+                )
+                manual_counts = _manual_room_plan_counts(room_plan)
+                adults = manual_counts['adults']
+                children = manual_counts['children']
+                paid_children = manual_counts['paid_children']
+                guest_count = manual_counts['guest_count']
+                day.update(manual_counts)
+                day_src.update(manual_counts)
+                day['composition_changed_manually'] = (
+                    adults != original_composition['adults'] or
+                    children != original_composition['children'] or
+                    paid_children != original_composition['paid_children']
+                )
+                day['original_composition'] = original_composition
+        else:
+            room_plan = _hydrate_saved_room_plan_live(
+                day_date=d, rows=rows, saved_plan=saved_by_day.get(d, []),
+                adults=adults, children=children, paid_children=paid_children,
+            )
+
+        summary = _manual_summary_from_room_plan(rows, room_plan, guest_count)
+        pricing = _quote_room_plan(
+            arrival=d, departure=nd, room_plan=room_plan,
+            price_list_id=price_list_id, rate_plan_id=rate_plan_id,
+        )
+        statement = _pricing_daily_statement(pricing, d, nd)
+        if not statement.get('days'):
+            raise RuntimeError(f'{day.get("date_label")}: не отримано точну денну вартість.')
+        day_results.append({
+            **day, 'rows': rows, 'room_plan': room_plan, 'room_options': _daily_room_options(rows),
+            'summary': summary, 'pricing': pricing, 'pricing_daily': statement,
+            'available_whole_stay': _ival(payload.get('available_whole_stay'), 0, minimum=0),
+            'active_rooms_whole_stay': _ival(payload.get('active_rooms_whole_stay'), 0, minimum=0),
+        })
+
+    conn.commit()
+    if not any(str(x.get('date') or '') == day_date for x in day_results):
+        raise ValueError('Вибрану ніч не знайдено у розрахунку.')
+    restrictions = _daily_booking_restrictions(day_results)
+    pricing = _compose_daily_pricing(day_results, restrictions)
+    pricing_daily = _pricing_daily_statement(pricing, str(q.get('arrival') or ''), str(q.get('departure') or ''))
+    first_plan = list((day_results[0].get('room_plan') or [])) if day_results else []
+    last_plan = list((day_results[-1].get('room_plan') or [])) if day_results else []
+    stay_time = _stay_time_availability_for_plans(
+        arrival=str(q.get('arrival') or ''), departure=str(q.get('departure') or ''),
+        first_room_plan=first_plan, last_room_plan=last_plan,
+        request_early_all=bool(_ival(q.get('early_checkin'), 0)),
+        request_late_all=bool(_ival(q.get('late_checkout'), 0)),
+        strict_explicit=True,
+    )
+    pricing, pricing_daily = _apply_stay_time_surcharges(
+        pricing, pricing_daily,
+        early_checkin=bool(stay_time.get('early_requested_count')),
+        late_checkout=bool(stay_time.get('late_requested_count')),
+        early_room_labels=stay_time.get('early_room_labels') or [],
+        late_room_labels=stay_time.get('late_room_labels') or [],
+        availability_meta=stay_time,
+    )
+    pricing.update(_tourist_tax_estimate(schedule))
+    commercial = _commercial_terms(
+        pricing.get('commercial_accommodation_total', pricing.get('hms_accommodation_total')),
+        q.get('commercial_discount_percent')
+    )
+    allocation = _daily_allocation_snapshot(day_results)
+    occupancy_daily = [
+        {'date': x.get('date'), 'next_date': x.get('next_date'), 'room_plan': x.get('room_plan') or []}
+        for x in day_results
+    ]
+    max_guests = max((_ival(x.get('guest_count'), 0) for x in schedule), default=0)
+    max_adults = max((_ival(x.get('adults'), 0) for x in schedule), default=0)
+    max_children = max((_ival(x.get('children'), 0) for x in schedule), default=0)
+    max_capacity = max((_ival((x.get('summary') or {}).get('allocated_capacity'), 0) for x in day_results), default=0)
+    max_spare = max((_ival((x.get('summary') or {}).get('spare_places'), 0) for x in day_results), default=0)
+    min_available = min((_ival(x.get('available_whole_stay'), 0) for x in day_results if _ival(x.get('guest_count'), 0) > 0), default=0)
+    cache_payload = {
+        '_daily_mode': True, 'nights': len(schedule), 'source': 'PMS Availability Sidecar',
+        'days': cache_days, 'daily_schedule': schedule,
+    }
+    selected = next(x for x in day_results if str(x.get('date') or '') == day_date)
+    return {
+        'day_results': day_results,
+        'selected_day_result': selected,
+        'pricing': pricing,
+        'commercial': commercial,
+        'allocation_snapshot': allocation,
+        'occupancy_daily': occupancy_daily,
+        'cache_payload': cache_payload,
+        'daily_schedule': schedule,
+        'warnings': warnings,
+        'max_guests': max_guests,
+        'max_adults': max_adults,
+        'max_children': max_children,
+        'max_capacity': max_capacity,
+        'max_spare': max_spare,
+        'min_available': min_available,
+    }
+
+==========================================================================================
+FUNCTION _hms_autofix_plan 6675-6824
+==========================================================================================
+def _hms_autofix_plan(row: Any, *, force_live: bool = False) -> Dict[str, Any]:
+    """Build an HMS-compatible physical-room plan without changing nightly headcount.
+
+    Occupancy profiles stay within the same RoomTypeID. A RoomID can be consumed only once,
+    or continued on the immediately next night with the same composition. This prevents the
+    writer from creating a second reservation-card for the same physical room.
+    """
+    q = _row_dict(row)
+    schedule = _quote_daily_schedule_from_row(row)
+    saved_by_day = _quote_occupancy_by_day(row)
+    if not schedule:
+        raise ValueError('У пропозиції немає денного плану для HMS-сумісного перерозподілу.')
+
+    first_day = str(schedule[0].get('date') or '')
+    last_day = str(schedule[-1].get('date') or '')
+    first_plan = [dict(x) for x in saved_by_day.get(first_day, []) if isinstance(x, dict)]
+    last_plan = [dict(x) for x in saved_by_day.get(last_day, []) if isinstance(x, dict)]
+    quote_early = bool(_ival(q.get('early_checkin'), 0))
+    quote_late = bool(_ival(q.get('late_checkout'), 0))
+    explicit_early = any(bool(x.get('early_checkin')) for x in first_plan)
+    explicit_late = any(bool(x.get('late_checkout')) for x in last_plan)
+
+    early_allowed: Optional[set] = None
+    late_allowed: Optional[set] = None
+    if force_live and quote_early:
+        a = date.fromisoformat(str(q.get('arrival') or first_day))
+        early_allowed, _labels, _warnings = _available_room_tokens_for_period((a - timedelta(days=1)).isoformat(), a.isoformat())
+    if force_live and quote_late:
+        d = date.fromisoformat(str(q.get('departure') or schedule[-1].get('next_date') or ''))
+        late_allowed, _labels, _warnings = _available_room_tokens_for_period(d.isoformat(), (d + timedelta(days=1)).isoformat())
+
+    room_state: Dict[int, Dict[str, Any]] = {}
+    plans_by_day: Dict[str, List[Dict[str, Any]]] = {}
+    changes: List[Dict[str, Any]] = []
+    availability_source = 'live' if force_live else 'saved_snapshot'
+
+    for day_idx, day in enumerate(schedule):
+        d = str(day.get('date') or '')
+        original_plan = [dict(x) for x in saved_by_day.get(d, []) if isinstance(x, dict)]
+        if not original_plan:
+            raise ValueError(f'{d}: у збереженій пропозиції немає фізичних номерів.')
+        if force_live:
+            options, _payload = _hms_live_options_for_day(row, day)
+        else:
+            options = _hms_saved_options_for_day(row, day)
+        if not options:
+            raise ValueError(f'{d}: немає каталогу фізичних номерів для HMS-сумісного перерозподілу.')
+
+        # Mark stay-time requirements on the occupancy profile. The selected service follows
+        # the guest/room stay to the replacement physical room and is live-checked on APPLY.
+        profiles = []
+        for source in original_plan:
+            profile = dict(source)
+            if day_idx == 0 and quote_early:
+                profile['_hms_requires_early'] = bool(source.get('early_checkin')) if explicit_early else True
+            else:
+                profile['_hms_requires_early'] = False
+            if day_idx == len(schedule) - 1 and quote_late:
+                profile['_hms_requires_late'] = bool(source.get('late_checkout')) if explicit_late else True
+            else:
+                profile['_hms_requires_late'] = False
+            profiles.append(profile)
+
+        by_type: Dict[int, List[Tuple[int, Dict[str, Any]]]] = {}
+        for idx, profile in enumerate(profiles):
+            by_type.setdefault(_ival(profile.get('room_type_id'), 0), []).append((idx, profile))
+        day_result: List[Optional[Dict[str, Any]]] = [None] * len(profiles)
+
+        for rt, indexed_profiles in by_type.items():
+            type_profiles = [p for _idx, p in indexed_profiles]
+            type_options = [o for o in options if _ival(o.get('room_type_id'), 0) == rt]
+            assigned = _hms_assign_profiles_for_type(
+                profiles=type_profiles,
+                options=type_options,
+                day_idx=day_idx,
+                room_state=room_state,
+                early_allowed=early_allowed,
+                late_allowed=late_allowed,
+            )
+            for local_idx, profile in enumerate(type_profiles):
+                global_idx = indexed_profiles[local_idx][0]
+                opt = dict(assigned[local_idx])
+                original_id = _ival(profile.get('room_id'), 0, minimum=0)
+                new_id = _ival(opt.get('room_id'), _ival(opt.get('room_id_token'), 0), minimum=0)
+                item = dict(opt)
+                for key in (
+                    'adults', 'children', 'paid_children', 'extra_beds',
+                    'resident_adults', 'nonresident_adults', 'tourist_tax_exempt_adults',
+                    'manual_locked', 'manual_source',
+                    'base_capacity', 'extra_capacity', 'capacity_per_room',
+                    'room_capacity_rule', 'bed_capacity_rule', 'portable_standard_bed',
+                ):
+                    if key in profile:
+                        item[key] = profile.get(key)
+                item['key'] = str(profile.get('key') or f'hmsfix_{d.replace("-", "")}_{global_idx + 1}')
+                item['position'] = _ival(profile.get('position'), global_idx + 1, minimum=1)
+                item['occupants'] = _ival(profile.get('adults'), 0, minimum=0) + _ival(profile.get('children'), 0, minimum=0)
+                if day_idx == 0:
+                    item['early_checkin'] = bool(profile.get('_hms_requires_early'))
+                elif 'early_checkin' in profile:
+                    item['early_checkin'] = bool(profile.get('early_checkin'))
+                if day_idx == len(schedule) - 1:
+                    item['late_checkout'] = bool(profile.get('_hms_requires_late'))
+                elif 'late_checkout' in profile:
+                    item['late_checkout'] = bool(profile.get('late_checkout'))
+                day_result[global_idx] = item
+
+                sig = _hms_room_signature(profile)
+                room_state[new_id] = {
+                    'signature': sig,
+                    'last_day_idx': day_idx,
+                    'room_type_id': rt,
+                }
+                if new_id != original_id:
+                    changes.append({
+                        'date': d,
+                        'from_room_id': original_id,
+                        'from_room': str(profile.get('room_label') or original_id),
+                        'to_room_id': new_id,
+                        'to_room': str(item.get('room_label') or new_id),
+                        'room_type_id': rt,
+                        'composition': _hms_signature_label(sig),
+                    })
+
+        finished = [dict(x) for x in day_result if isinstance(x, dict)]
+        expected_a = _ival(day.get('adults'), 0, minimum=0)
+        expected_c = _ival(day.get('children'), 0, minimum=0)
+        expected_pc = _ival(day.get('paid_children'), 0, minimum=0)
+        _validate_room_plan(finished, expected_a, expected_c, expected_pc)
+        plans_by_day[d] = finished
+
+    after = _hms_compatibility_from_plans(schedule, plans_by_day)
+    if not after.get('compatible'):
+        raise ValueError('Автоперерозподіл не прибрав усі повторні HMS stay-картки одного RoomID.')
+
+    change_map: Dict[str, List[str]] = {}
+    for ch in changes:
+        text = f"№{ch['from_room']} → №{ch['to_room']} · {ch['composition']}"
+        change_map.setdefault(str(ch['date']), []).append(text)
+    return {
+        'ok': True,
+        'source': availability_source,
+        'plans_by_day': plans_by_day,
+        'changes': changes,
+        'change_count': len(changes),
+        'change_map': change_map,
+        'compatible_after': True,
+        'rooms_unique_after': after.get('rooms_unique'),
+        'room_stays_count_after': after.get('room_stays_count'),
+    }
+
+==========================================================================================
+FUNCTION _hms_recalculate_exact_daily_plans 6901-7029
+==========================================================================================
+def _hms_recalculate_exact_daily_plans(row: Any, plans_by_day: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]:
+    """Live-reprice and validate an already chosen exact physical-room plan for every night."""
+    q = _row_dict(row)
+    schedule = [dict(x) for x in _quote_daily_schedule_from_row(row)]
+    if not schedule:
+        raise ValueError('У пропозиції немає збереженого денного плану.')
+    price_list_id = _ival(q.get('price_list_id'), DEFAULT_BASE_PRICE_LIST_ID, minimum=0)
+    rate_plan_id = _ival(q.get('rate_plan_id'), 0, minimum=0)
+    if rate_plan_id <= 0:
+        rate_plan_id, _resolution = _effective_quote_rate_plan_id(price_list_id)
+
+    conn = _db()
+    day_results: List[Dict[str, Any]] = []
+    cache_days: List[Dict[str, Any]] = []
+    warnings: List[str] = []
+    for day in schedule:
+        d = str(day.get('date') or '')
+        nd = str(day.get('next_date') or '')
+        adults = _ival(day.get('adults'), 0, minimum=0)
+        children = _ival(day.get('children'), 0, minimum=0)
+        paid_children = _ival(day.get('paid_children'), 0, minimum=0)
+        guest_count = adults + children
+        if guest_count <= 0:
+            day_results.append({
+                **day, 'rows': [], 'room_plan': [], 'room_options': [],
+                'summary': {'rows': [], 'used_rooms': 0, 'allocated_capacity': 0, 'configured_capacity': 0, 'shortage': 0, 'spare_places': 0, 'fits': True},
+                'pricing': {'ok': True, 'rooms': [], 'hms_accommodation_total': 0, 'stay_total_before_tourist_tax': 0, 'tourist_tax_total': 0, 'stay_total': 0, 'currency': str(q.get('currency') or 'UAH'), 'booking_restrictions': [], 'booking_allowed': True},
+                'pricing_daily': {'days': [{'date': d, 'next_date': nd, 'date_label': day.get('date_label'), 'next_date_label': day.get('next_date_label'), 'lines': [], 'total': 0, 'base_total': 0, 'extra_total': 0}], 'period_extras': [], 'has_daily_rates': True, 'currency': str(q.get('currency') or 'UAH')},
+                'available_whole_stay': 0, 'active_rooms_whole_stay': 0,
+            })
+            continue
+        raw = _request_pms_live(d, nd)
+        payload, day_warnings = _validate_payload(raw, d, nd)
+        _sync_categories_from_payload(conn, payload)
+        cache_days.append({'date': d, 'next_date': nd, 'payload': payload})
+        warnings.extend([f'{day.get("date_label")}: {x}' for x in day_warnings])
+        rows = _category_rows(payload, str(day.get('placement_mode') or 'standard'), bool(day.get('include_extra')))
+        desired = [dict(x) for x in (plans_by_day.get(d) or []) if isinstance(x, dict)]
+        if not desired:
+            raise ValueError(f'{d}: автоперерозподіл не повернув фізичні номери.')
+        room_plan = _hms_hydrate_autofix_room_plan_live(
+            day_date=d,
+            rows=rows,
+            desired_plan=desired,
+            adults=adults,
+            children=children,
+            paid_children=paid_children,
+        )
+        summary = _manual_summary_from_room_plan(rows, room_plan, guest_count)
+        pricing = _quote_room_plan(
+            arrival=d, departure=nd, room_plan=room_plan,
+            price_list_id=price_list_id, rate_plan_id=rate_plan_id,
+        )
+        statement = _pricing_daily_statement(pricing, d, nd)
+        if not statement.get('days'):
+            raise RuntimeError(f'{day.get("date_label")}: не отримано точну денну вартість.')
+        day_results.append({
+            **day, 'rows': rows, 'room_plan': room_plan, 'room_options': _daily_room_options(rows),
+            'summary': summary, 'pricing': pricing, 'pricing_daily': statement,
+            'available_whole_stay': _ival(payload.get('available_whole_stay'), 0, minimum=0),
+            'active_rooms_whole_stay': _ival(payload.get('active_rooms_whole_stay'), 0, minimum=0),
+        })
+
+    conn.commit()
+    restrictions = _daily_booking_restrictions(day_results)
+    pricing = _compose_daily_pricing(day_results, restrictions)
+    pricing_daily = _pricing_daily_statement(pricing, str(q.get('arrival') or ''), str(q.get('departure') or ''))
+    first_plan = list((day_results[0].get('room_plan') or [])) if day_results else []
+    last_plan = list((day_results[-1].get('room_plan') or [])) if day_results else []
+    stay_time = _stay_time_availability_for_plans(
+        arrival=str(q.get('arrival') or ''), departure=str(q.get('departure') or ''),
+        first_room_plan=first_plan, last_room_plan=last_plan,
+        request_early_all=bool(_ival(q.get('early_checkin'), 0)),
+        request_late_all=bool(_ival(q.get('late_checkout'), 0)),
+        strict_explicit=True,
+    )
+    pricing, pricing_daily = _apply_stay_time_surcharges(
+        pricing, pricing_daily,
+        early_checkin=bool(stay_time.get('early_requested_count')),
+        late_checkout=bool(stay_time.get('late_requested_count')),
+        early_room_labels=stay_time.get('early_room_labels') or [],
+        late_room_labels=stay_time.get('late_room_labels') or [],
+        availability_meta=stay_time,
+    )
+    pricing.update(_tourist_tax_estimate(schedule))
+    commercial = _commercial_terms(
+        pricing.get('commercial_accommodation_total', pricing.get('hms_accommodation_total')),
+        q.get('commercial_discount_percent'),
+    )
+    allocation = _daily_allocation_snapshot(day_results)
+    occupancy_daily = [
+        {'date': x.get('date'), 'next_date': x.get('next_date'), 'room_plan': x.get('room_plan') or []}
+        for x in day_results
+    ]
+    after_plans = {str(x.get('date') or ''): list(x.get('room_plan') or []) for x in day_results}
+    after_compat = _hms_compatibility_from_plans(schedule, after_plans)
+    if not after_compat.get('compatible'):
+        raise ValueError('Після live-перевірки розміщення знову стало несумісним з HMS. Зміни не збережено.')
+
+    max_guests = max((_ival(x.get('guest_count'), 0) for x in schedule), default=0)
+    max_adults = max((_ival(x.get('adults'), 0) for x in schedule), default=0)
+    max_children = max((_ival(x.get('children'), 0) for x in schedule), default=0)
+    max_capacity = max((_ival((x.get('summary') or {}).get('allocated_capacity'), 0) for x in day_results), default=0)
+    max_spare = max((_ival((x.get('summary') or {}).get('spare_places'), 0) for x in day_results), default=0)
+    min_available = min((_ival(x.get('available_whole_stay'), 0) for x in day_results if _ival(x.get('guest_count'), 0) > 0), default=0)
+    cache_payload = {
+        '_daily_mode': True,
+        'nights': len(schedule),
+        'source': 'PMS Availability Sidecar',
+        'days': cache_days,
+        'daily_schedule': schedule,
+    }
+    return {
+        'day_results': day_results,
+        'pricing': pricing,
+        'commercial': commercial,
+        'allocation_snapshot': allocation,
+        'occupancy_daily': occupancy_daily,
+        'cache_payload': cache_payload,
+        'daily_schedule': schedule,
+        'warnings': warnings,
+        'max_guests': max_guests,
+        'max_adults': max_adults,
+        'max_children': max_children,
+        'max_capacity': max_capacity,
+        'max_spare': max_spare,
+        'min_available': min_available,
+        'hms_compatibility': after_compat,
+    }
+
+==========================================================================================
+FUNCTION _hms_booking_payload 7032-7169
+==========================================================================================
+def _hms_booking_payload(row: Any) -> Dict[str, Any]:
+    """Build a traceable booking payload from the exact saved quote snapshot.
+
+    This function is non-destructive. It never creates an HMS reservation and never reads
+    the latest calculator session/global result. The future writer must use this frozen
+    payload plus a fresh preflight.
+    """
+    q = _row_dict(row)
+    if not q:
+        raise ValueError('Порожня пропозиція.')
+    if str(q.get('tariff_status') or '') != 'live_hms' or q.get('stay_total_before_tourist_tax') is None:
+        raise ValueError('Для передачі в HMS потрібна збережена пропозиція з актуальною live HMS ціною.')
+    if _ival(q.get('shortage'), 0, minimum=0) > 0:
+        raise ValueError('Пропозиція має дефіцит місць і не може бути підготовлена до бронювання.')
+
+    arrival = str(q.get('arrival') or '')
+    departure = str(q.get('departure') or '')
+    _parse_dates(arrival, departure)
+    schedule = _quote_daily_schedule_from_row(q)
+    occupancy_by_day = _quote_occupancy_by_day(q)
+    if not schedule:
+        raise ValueError('У пропозиції немає нічного складу групи.')
+    nights_out: List[Dict[str, Any]] = []
+    all_room_ids = set()
+    for day in schedule:
+        day_date = str(day.get('date') or '')
+        next_date = str(day.get('next_date') or '')
+        if not day_date or not next_date:
+            raise ValueError('У нічному плані пропозиції відсутня дата.')
+        plan = [dict(x) for x in (occupancy_by_day.get(day_date) or []) if isinstance(x, dict)]
+        if not plan:
+            raise ValueError(f'{day_date}: у збереженому snapshot немає фізичних номерів.')
+        seen = set()
+        actual_adults = actual_children = actual_paid = 0
+        rooms: List[Dict[str, Any]] = []
+        for room in plan:
+            token = str(room.get('room_id') or '').strip()
+            if not token:
+                raise ValueError(f'{day_date}: знайдено номер без RoomID.')
+            try:
+                room_id = int(token)
+            except Exception as exc:
+                raise ValueError(f'{day_date}: некоректний RoomID {token!r}.') from exc
+            if room_id in seen:
+                raise ValueError(f'{day_date}: фізичний RoomID {room_id} використано двічі.')
+            seen.add(room_id)
+            all_room_ids.add(room_id)
+            rt = _ival(room.get('room_type_id'), 0, minimum=0)
+            if rt <= 0 or rt == 13:
+                raise ValueError(f'{day_date}: номер {room.get("room_label") or room_id} має некоректний RoomTypeID {rt}.')
+            adults = _ival(room.get('adults'), 0, minimum=0)
+            children = _ival(room.get('children'), 0, minimum=0)
+            paid_children = _ival(room.get('paid_children'), 0, minimum=0)
+            extra_beds = _ival(room.get('extra_beds'), 0, minimum=0)
+            if adults <= 0:
+                raise ValueError(f'{day_date}: у номері {room.get("room_label") or room_id} немає дорослого.')
+            if paid_children > children:
+                raise ValueError(f'{day_date}: платних дітей більше, ніж дітей у номері {room.get("room_label") or room_id}.')
+            actual_adults += adults
+            actual_children += children
+            actual_paid += paid_children
+            pricing_occ = _pms_pricing_occupancy(room)
+            rooms.append({
+                'room_id': room_id,
+                'room_number': str(room.get('room_label') or room_id),
+                'room_type_id': rt,
+                'category': str(room.get('category') or ROOM_TYPE_NAMES.get(rt) or ''),
+                'adults': adults,
+                'children': children,
+                'paid_children': paid_children,
+                'extra_beds': extra_beds,
+                'base_capacity': _ival(room.get('base_capacity'), 0, minimum=0),
+                'extra_capacity': _ival(room.get('extra_capacity'), 0, minimum=0),
+                'pricing_occupancy': {
+                    'adults': pricing_occ['adults'],
+                    'children': pricing_occ['children'],
+                    'paid_children': pricing_occ['paid_children'],
+                    'extra_beds': pricing_occ['extra_beds'],
+                },
+                'early_checkin': bool(room.get('early_checkin')),
+                'late_checkout': bool(room.get('late_checkout')),
+            })
+        expected_adults = _ival(day.get('adults'), 0, minimum=0)
+        expected_children = _ival(day.get('children'), 0, minimum=0)
+        expected_paid = _ival(day.get('paid_children'), 0, minimum=0)
+        if (actual_adults, actual_children, actual_paid) != (expected_adults, expected_children, expected_paid):
+            raise ValueError(
+                f'{day_date}: склад фізичних номерів {actual_adults}+{actual_children} (платних дітей {actual_paid}) '
+                f'не збігається зі складом ночі {expected_adults}+{expected_children} (платних дітей {expected_paid}).'
+            )
+        nights_out.append({
+            'date': day_date,
+            'next_date': next_date,
+            'adults': expected_adults,
+            'children': expected_children,
+            'paid_children': expected_paid,
+            'guest_count': expected_adults + expected_children,
+            'placement_mode': str(day.get('placement_mode') or q.get('placement_mode') or ''),
+            'include_extra': _ival(day.get('include_extra'), _ival(q.get('include_extra'), 0), minimum=0, maximum=1),
+            'rooms': rooms,
+        })
+
+    revision_no = _ival(q.get('revision_no'), 1, minimum=1)
+    guest_list = _guest_list_from_json(q.get('guest_list_json') or '[]')
+    hms_price_list = _hms_booking_price_list_mapping(q.get('commercial_discount_percent') or 0)
+    core: Dict[str, Any] = {
+        'contract_version': 'riverwood-hms-booking-v1',
+        'quote_id': str(q.get('quote_id') or ''),
+        'quote_number': str(q.get('quote_number') or ''),
+        'quote_revision': revision_no,
+        'client_name': str(q.get('client_name') or ''),
+        'title': str(q.get('title') or ''),
+        'arrival': arrival,
+        'departure': departure,
+        'nights': _ival(q.get('nights'), len(nights_out), minimum=1),
+        'early_checkin': bool(q.get('early_checkin')),
+        'late_checkout': bool(q.get('late_checkout')),
+        'price_list_id': _ival(q.get('price_list_id'), 0, minimum=0),
+        'rate_plan_id': _ival(q.get('rate_plan_id'), 0, minimum=0),
+        'currency': str(q.get('currency') or 'UAH'),
+        'commercial_total_reference': _money_float(_money_decimal(q.get('commercial_total') or q.get('stay_total_before_tourist_tax'))),
+        'commercial_discount_percent': _money_float(_money_decimal(q.get('commercial_discount_percent') or 0)),
+        'commercial_discount_amount': _money_float(_money_decimal(q.get('commercial_discount_amount') or 0)),
+        'hms_booking_price_list_id': int(hms_price_list['price_list_id']) if hms_price_list else 0,
+        'hms_booking_price_list_name': str(hms_price_list['price_list_name']) if hms_price_list else '',
+        'commercial_note': str(q.get('commercial_note') or ''),
+        'manager_note': str(q.get('manager_note') or ''),
+        'guest_note': str(q.get('guest_note') or ''),
+        'guest_list': guest_list,
+        'guest_list_count': len(guest_list),
+        'guest_list_complete': len(guest_list) >= _ival(q.get('guest_count'), 0, minimum=0),
+        'rooms_unique': len(all_room_ids),
+        'nights_plan': nights_out,
+    }
+    canonical = json.dumps(core, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode('utf-8')
+    core['snapshot_sha256'] = hashlib.sha256(canonical).hexdigest()
+    core['idempotency_key'] = f"{core['quote_id']}:{revision_no}:{core['snapshot_sha256'][:16]}"
+    return core
+
+==========================================================================================
+FUNCTION _hms_booking_state 7346-7430
+==========================================================================================
+def _hms_booking_state(row: Any) -> Dict[str, Any]:
+    q = _row_dict(row)
+    raw_status = str(q.get('hms_booking_status') or '').strip()
+    try:
+        preflight = json.loads(q.get('hms_booking_preflight_json') or '{}')
+        if not isinstance(preflight, dict):
+            preflight = {}
+    except Exception:
+        preflight = {}
+    try:
+        diagnostic = json.loads(q.get('hms_booking_bridge_diagnostic_json') or '{}')
+        if not isinstance(diagnostic, dict):
+            diagnostic = {}
+    except Exception:
+        diagnostic = {}
+
+    current_revision = _ival(q.get('revision_no'), 1, minimum=1)
+    checked_revision = _ival(q.get('hms_booking_quote_revision'), 0, minimum=0)
+    legacy_statuses = {
+        'bridge_waiting','bridge_error','bridge_group_ready','draft_error','draft_ready',
+        'draft_unverified','draft_verified','snapshot_prepared'
+    }
+    legacy_temp_group_id = ''
+    if raw_status in legacy_statuses:
+        legacy_temp_group_id = str(q.get('hms_booking_group_id') or q.get('hms_booking_bridge_group_id') or '').strip()
+
+    if raw_status == 'booked':
+        status = 'booked'
+    elif raw_status == 'booking_uncertain':
+        status = 'booking_uncertain'
+    elif checked_revision and checked_revision != current_revision:
+        status = 'stale'
+    elif raw_status == 'error':
+        status = 'error'
+    elif isinstance(preflight, dict) and str(preflight.get('status') or '') in ('ready', 'blocked') and checked_revision == current_revision:
+        status = str(preflight.get('status') or '')
+    elif raw_status in ('ready','blocked','stale'):
+        status = raw_status
+    elif raw_status in legacy_statuses:
+        status = 'not_checked'
+    else:
+        status = raw_status or 'not_checked'
+
+    final_group_id = str(q.get('hms_booking_group_id') or '').strip() if status in ('booked','booking_uncertain') else ''
+    compatibility = _hms_compatibility_report(q, include_proposal=True)
+    if not compatibility.get('compatible') and status not in ('booked', 'booking_uncertain', 'error'):
+        status = 'blocked'
+    write_blockers: List[str] = []
+    if not compatibility.get('compatible'):
+        write_blockers.append(
+            f"Розміщення несумісне з HMS: {compatibility.get('issue_count') or 0} фізичний(і) номер(и) "
+            'розбиваються на кілька stay-карток. Скористайтесь «Автовиправити розміщення для HMS».'
+        )
+    hms_price_list = _hms_booking_price_list_mapping(q.get('commercial_discount_percent') or 0)
+    if not hms_price_list:
+        try:
+            discount_text = f"{float(q.get('commercial_discount_percent') or 0):g}%"
+        except Exception:
+            discount_text = str(q.get('commercial_discount_percent') or '')
+        write_blockers.append(
+            f'Для комерційної знижки {discount_text} немає підтвердженого HMS PriceList. '
+            'Автозапис залишається заблокованим, щоб не змінити фінансові умови.'
+        )
+    return {
+        'status': status,
+        'preflight': preflight,
+        'preflight_at': q.get('hms_booking_preflight_at') or '',
+        'preflight_by': q.get('hms_booking_preflight_by') or '',
+        'checked_revision': checked_revision,
+        'current_revision': current_revision,
+        'stale': status == 'stale',
+        'group_id': final_group_id,
+        'group_account': (f"G{_ival(final_group_id, 0, minimum=0):010d}" if _ival(final_group_id, 0, minimum=0) > 0 else ''),
+        'booking_created_at': q.get('hms_booking_created_at') or '',
+        'booking_created_by': str(q.get('hms_booking_created_by') or ''),
+        'last_error': str(q.get('hms_booking_last_error') or ''),
+        'direct_diagnostic': diagnostic,
+        'direct_has_diagnostic': bool(diagnostic),
+        'legacy_temp_group_id': legacy_temp_group_id,
+        'legacy_state_ignored': bool(raw_status in legacy_statuses),
+        'write_blockers': write_blockers,
+        'hms_compatibility': compatibility,
+        'hms_price_list': hms_price_list or {},
+        'can_book': bool(status == 'ready' and not write_blockers),
+    }
