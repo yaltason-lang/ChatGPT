@@ -1,0 +1,80 @@
+name: Build Riverwood Capture Live 8080 V1
+
+on:
+  push:
+    branches:
+      - riverwood-capture-live-8080-v1
+    paths:
+      - 'tools/capture_live_8080_operations_v1.ps1'
+      - 'tools/CAPTURE_LIVE_8080_OPERATIONS_V1.bat'
+      - '.github/workflows/build-capture-8080-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: riverwood-capture-live-8080-v1
+
+      - name: Parse PowerShell 5.1 script
+        shell: powershell
+        run: |
+          $path = Join-Path $PWD 'tools\capture_live_8080_operations_v1.ps1'
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+          Write-Host 'PowerShell parse: PASS'
+
+      - name: Build ZIP
+        shell: powershell
+        run: |
+          $name = 'Riverwood_CAPTURE_LIVE_8080_OPERATIONS_V1'
+          $stage = Join-Path $env:RUNNER_TEMP $name
+          New-Item -ItemType Directory -Path $stage -Force | Out-Null
+          Copy-Item 'tools\capture_live_8080_operations_v1.ps1' (Join-Path $stage 'capture_live_8080_operations_v1.ps1')
+          Copy-Item 'tools\CAPTURE_LIVE_8080_OPERATIONS_V1.bat' (Join-Path $stage 'CAPTURE_LIVE_8080_OPERATIONS_V1.bat')
+          @'
+          Riverwood LIVE :8080 Operations capture V1
+          ===========================================
+          READ ONLY. Does not modify, stop, start, or restart any service or source file.
+
+          Run CAPTURE_LIVE_8080_OPERATIONS_V1.bat on the host where Operations :8080 is listening.
+          After CAPTURE OK, send CAPTURE_REPORT.txt and LIVE_8080_accommodation_module.py from CAPTURED_LIVE_8080_OPERATIONS to ChatGPT.
+          '@ | Set-Content -Path (Join-Path $stage 'README.txt') -Encoding UTF8
+          New-Item -ItemType Directory -Path 'release' -Force | Out-Null
+          $zip = Join-Path $PWD ('release\' + $name + '.zip')
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path $stage -DestinationPath $zip -CompressionLevel Optimal
+          $extract = Join-Path $env:RUNNER_TEMP 'verify_capture_8080'
+          Expand-Archive -Path $zip -DestinationPath $extract -Force
+          $ps1 = Get-ChildItem -Path $extract -Filter 'capture_live_8080_operations_v1.ps1' -File -Recurse | Select-Object -First 1
+          if (-not $ps1) { throw 'PS1 missing from ZIP' }
+          $body = Get-Content -LiteralPath $ps1.FullName -Raw
+          if ($body -notmatch 'CAPTURE TOOL 8080 V1') { throw 'V1 marker missing from ZIP' }
+          if ($body -notmatch 'LocalPort 8080') { throw ':8080 listener check missing from ZIP' }
+          if ($body -match 'Stop-Process|Restart-Service|Stop-Service|Start-Service') { throw 'Forbidden lifecycle command found in capture tool' }
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          Write-Host ('ZIP SHA256: ' + $hash)
+          $hash | Set-Content -Path 'release\Riverwood_CAPTURE_LIVE_8080_OPERATIONS_V1.sha256.txt' -Encoding ASCII
+
+      - name: Commit release ZIP
+        shell: powershell
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release/Riverwood_CAPTURE_LIVE_8080_OPERATIONS_V1.zip release/Riverwood_CAPTURE_LIVE_8080_OPERATIONS_V1.sha256.txt
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host 'Release already current.'
+            exit 0
+          }
+          git commit -m 'Build read-only live 8080 capture V1'
+          git push origin HEAD:riverwood-capture-live-8080-v1
