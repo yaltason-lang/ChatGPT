@@ -1,0 +1,121 @@
+name: Build Riverwood Writer V10 Runtime Preflight Guard V1
+
+on:
+  push:
+    branches:
+      - riverwood-hms-writer-v10-runtime-preflight-guard-v1
+    paths:
+      - 'tools/patch_operations_writer_runtime_guard_v1.py'
+      - 'tools/restart_verified_writer_v10.ps1'
+      - 'tools/APPLY_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1.bat'
+      - 'tools/README_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1.txt'
+      - '.github/workflows/build-writer-runtime-preflight-guard-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build V1 Operations reference baseline
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          Copy-Item accommodation_module.py build\accommodation_module.py
+          py -3 tools\patch_live_operations_earlylate_v1.py --source build\accommodation_module.py --no-sha-gate --no-backup
+
+      - name: Patch runtime guard and compile
+        shell: pwsh
+        run: |
+          py -3 tools\patch_operations_writer_runtime_guard_v1.py --source build\accommodation_module.py --no-backup
+          py -3 -m py_compile build\accommodation_module.py
+
+      - name: Static regression assertions
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+          import ast
+          p = Path('build/accommodation_module.py')
+          text = p.read_text(encoding='utf-8-sig')
+          assert '# RIVERWOOD_EARLYLATE_ADJACENT_DAY_ALLOC_V1' in text
+          assert '# RIVERWOOD_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1' in text
+          assert '23462d24847e677e6fedaa1bf4cbe863899341d536122a3140a7408abb5926ac' in text
+          assert "'type': 'writer_runtime_not_ready'" in text
+          assert "'booking_write_enabled': bool(writer_runtime.get('ok'))" in text
+          assert "'writer_runtime': writer_runtime" in text
+          assert "'early_checkin': bool(room.get('early_checkin'))" in text
+          assert "'late_checkout': bool(room.get('late_checkout'))" in text
+          assert "'paid_children'" in text
+          tree = ast.parse(text)
+          names = [n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]
+          assert names.count('_hms_writer_v10_runtime_guard') == 1
+          assert names.count('_hms_booking_preflight') == 1
+          print('STATIC REGRESSION PASS')
+          '@ | Set-Content -Encoding UTF8 build\verify_static.py
+          py -3 build\verify_static.py
+
+      - name: PowerShell and batch safety checks
+        shell: pwsh
+        run: |
+          $null = [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path tools\restart_verified_writer_v10.ps1), [ref]$null, [ref]$null)
+          $psText = Get-Content tools\restart_verified_writer_v10.ps1 -Raw
+          if ($psText -notmatch 'Get-FileHash') { throw 'SHA verification missing' }
+          if ($psText -notmatch 'ExpectedSha') { throw 'Expected SHA missing' }
+          if ($psText -notmatch 'Get-NetTCPConnection -LocalPort 8085') { throw '8085 listener proof missing' }
+          if ($psText -match '8082') { throw 'Forbidden :8082 reference found in restart script' }
+          $batText = Get-Content tools\APPLY_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1.bat -Raw
+          if ($batText -notmatch 'restart_verified_writer_v10.ps1') { throw 'Restart helper is not wired' }
+          if ($batText -notmatch 'patch_operations_writer_runtime_guard_v1.py') { throw 'Operations patcher is not wired' }
+          Write-Host 'SCRIPT SAFETY PASS'
+
+      - name: Build ZIP package
+        shell: pwsh
+        run: |
+          $pkg = 'Riverwood_5SEP_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1'
+          New-Item -ItemType Directory -Force (Join-Path build $pkg) | Out-Null
+          Copy-Item tools\patch_operations_writer_runtime_guard_v1.py (Join-Path build $pkg)
+          Copy-Item tools\restart_verified_writer_v10.ps1 (Join-Path build $pkg)
+          Copy-Item tools\APPLY_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1.bat (Join-Path build $pkg)
+          Copy-Item tools\README_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1.txt (Join-Path build $pkg 'README.txt')
+          Compress-Archive -Path (Join-Path build $pkg) -DestinationPath (Join-Path build ($pkg + '.zip')) -Force
+          $sha = (Get-FileHash (Join-Path build ($pkg + '.zip')) -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Encoding ASCII (Join-Path build ($pkg + '.sha256.txt')) $sha
+          Write-Host ('PACKAGE SHA256=' + $sha)
+
+      - name: Verify packaged files
+        shell: pwsh
+        run: |
+          $pkg = 'Riverwood_5SEP_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1'
+          Expand-Archive -Path (Join-Path build ($pkg + '.zip')) -DestinationPath build\unpacked -Force
+          $root = Join-Path build\unpacked $pkg
+          foreach ($f in @('patch_operations_writer_runtime_guard_v1.py','restart_verified_writer_v10.ps1','APPLY_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1.bat','README.txt')) {
+            if (-not (Test-Path (Join-Path $root $f))) { throw ('Missing packaged file: ' + $f) }
+          }
+          py -3 -m py_compile (Join-Path $root 'patch_operations_writer_runtime_guard_v1.py')
+          $null = [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path (Join-Path $root 'restart_verified_writer_v10.ps1')), [ref]$null, [ref]$null)
+          Write-Host 'ZIP VERIFY PASS'
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Riverwood_5SEP_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1
+          path: |
+            build/Riverwood_5SEP_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1.zip
+            build/Riverwood_5SEP_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1.sha256.txt
+
+      - name: Publish package to branch release folder
+        if: success()
+        shell: pwsh
+        run: |
+          $pkg = 'Riverwood_5SEP_HMS_WRITER_V10_RUNTIME_PREFLIGHT_GUARD_V1'
+          New-Item -ItemType Directory -Force release | Out-Null
+          Copy-Item (Join-Path build ($pkg + '.zip')) (Join-Path release ($pkg + '.zip')) -Force
+          Copy-Item (Join-Path build ($pkg + '.sha256.txt')) (Join-Path release ($pkg + '.sha256.txt')) -Force
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release/$pkg.zip release/$pkg.sha256.txt
+          git diff --cached --quiet; if ($LASTEXITCODE -ne 0) { git commit -m 'Publish verified writer v10 runtime preflight guard V1 package [skip ci]'; git push }
