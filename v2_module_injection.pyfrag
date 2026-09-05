@@ -1,0 +1,392 @@
+# RIVERWOOD_HMS_COMPAT_AUTOFIX_V2
+# Dashboard-side compatibility guard.  This deliberately mirrors the HMS writer's
+# stay signature without changing pms_booking_adapter_v1.py or any sidecar runtime.
+
+
+def _hms_compat_signature(room: Any) -> Tuple[int, int, int, int, int]:
+    r = room if isinstance(room, dict) else {}
+    return (
+        _ival(r.get('room_type_id'), 0, minimum=0),
+        _ival(r.get('adults'), 0, minimum=0),
+        _ival(r.get('children'), 0, minimum=0),
+        _ival(r.get('paid_children'), 0, minimum=0),
+        _ival(r.get('extra_beds'), 0, minimum=0),
+    )
+
+
+def _hms_compatibility_analysis_from_plans(
+    schedule: Iterable[Dict[str, Any]], occupancy_by_day: Dict[str, List[Dict[str, Any]]]
+) -> Dict[str, Any]:
+    """Detect writer-side stay splits caused only by composition changes.
+
+    The HMS writer treats a continuous stay as the same card only while
+    (RoomTypeID, adults, children, paid_children, extra_beds) stays unchanged.
+    Early/late flags intentionally do not participate in this signature.
+    """
+    days = [dict(x) for x in (schedule or []) if isinstance(x, dict)]
+    order = {str(x.get('date') or ''): i for i, x in enumerate(days)}
+    entries_by_room: Dict[str, List[Dict[str, Any]]] = {}
+    all_room_ids = set()
+    for day in days:
+        d = str(day.get('date') or '')
+        nd = str(day.get('next_date') or '')
+        for room in occupancy_by_day.get(d, []) or []:
+            if not isinstance(room, dict):
+                continue
+            token = str(room.get('room_id') or '').strip()
+            if not token:
+                continue
+            all_room_ids.add(token)
+            entry = dict(room)
+            entry['date'] = d
+            entry['next_date'] = nd
+            entry['_signature'] = _hms_compat_signature(room)
+            entries_by_room.setdefault(token, []).append(entry)
+
+    conflicts: List[Dict[str, Any]] = []
+    writer_stays_count = 0
+    for token, raw_entries in entries_by_room.items():
+        entries = sorted(raw_entries, key=lambda x: order.get(str(x.get('date') or ''), 10**9))
+        if not entries:
+            continue
+
+        # First count writer-style stays across the whole quote, including natural gaps.
+        prev = None
+        for entry in entries:
+            if (
+                prev is None
+                or str(prev.get('next_date') or '') != str(entry.get('date') or '')
+                or tuple(prev.get('_signature') or ()) != tuple(entry.get('_signature') or ())
+            ):
+                writer_stays_count += 1
+            prev = entry
+
+        bad_runs: List[Dict[str, Any]] = []
+        run: List[Dict[str, Any]] = []
+        for entry in entries:
+            if run and str(run[-1].get('next_date') or '') != str(entry.get('date') or ''):
+                # A gap creates a legitimate new stay, not this compatibility conflict.
+                if run:
+                    bad_runs.append({'entries': run})
+                run = []
+            run.append(entry)
+        if run:
+            bad_runs.append({'entries': run})
+
+        conflict_segments: List[Dict[str, Any]] = []
+        replacement_nights: List[str] = []
+        conflict_run_count = 0
+        for run_no, run_obj in enumerate(bad_runs, start=1):
+            run_entries = list(run_obj.get('entries') or [])
+            sig_segments: List[List[Dict[str, Any]]] = []
+            current: List[Dict[str, Any]] = []
+            for entry in run_entries:
+                if current and tuple(current[-1].get('_signature') or ()) != tuple(entry.get('_signature') or ()):
+                    sig_segments.append(current)
+                    current = []
+                current.append(entry)
+            if current:
+                sig_segments.append(current)
+            if len(sig_segments) <= 1:
+                continue
+            conflict_run_count += 1
+            for seg_no, seg_entries in enumerate(sig_segments, start=1):
+                first = seg_entries[0]
+                sig = tuple(first.get('_signature') or ())
+                needs_replacement = seg_no > 1
+                dates = [str(x.get('date') or '') for x in seg_entries]
+                if needs_replacement:
+                    replacement_nights.extend(dates)
+                conflict_segments.append({
+                    'run_no': run_no,
+                    'segment_no': seg_no,
+                    'start_date': dates[0] if dates else '',
+                    'end_date': str(seg_entries[-1].get('next_date') or '') if seg_entries else '',
+                    'dates': dates,
+                    'nights': len(dates),
+                    'room_type_id': sig[0] if len(sig) > 0 else 0,
+                    'adults': sig[1] if len(sig) > 1 else 0,
+                    'children': sig[2] if len(sig) > 2 else 0,
+                    'paid_children': sig[3] if len(sig) > 3 else 0,
+                    'extra_beds': sig[4] if len(sig) > 4 else 0,
+                    'signature': list(sig),
+                    'needs_replacement': needs_replacement,
+                    'action': 'replace' if needs_replacement else 'keep',
+                })
+
+        if not conflict_segments:
+            continue
+        first = entries[0]
+        room_label = str(first.get('room_label') or first.get('room_number') or token)
+        room_type_id = _ival(first.get('room_type_id'), 0, minimum=0)
+        category = str(first.get('category') or first.get('pms_category') or ROOM_TYPE_NAMES.get(room_type_id) or '')
+        replacement_nights = list(dict.fromkeys(x for x in replacement_nights if x))
+        conflicts.append({
+            'room_id': token,
+            'room_label': room_label,
+            'room_type_id': room_type_id,
+            'category': category,
+            'segments': conflict_segments,
+            'replacement_nights': replacement_nights,
+            'conflict_runs': conflict_run_count,
+            'message': (
+                f'Номер №{room_label}: склад змінюється на суміжних ночах, тому HMS writer '
+                f'створить кілька stay-карток для одного RoomID. Замініть фізичний номер на ночах: '
+                + ', '.join(replacement_nights)
+            ),
+        })
+
+    return {
+        'marker': HMS_COMPATIBILITY_AUTOFIX_V2_MARKER,
+        'blocking': bool(conflicts),
+        'status': 'blocked' if conflicts else 'ok',
+        'conflict_count': len(conflicts),
+        'conflicts': conflicts,
+        'rooms_unique': len(all_room_ids),
+        'writer_stays_count': writer_stays_count,
+        'replacement_nights': list(dict.fromkeys(
+            d for c in conflicts for d in (c.get('replacement_nights') or []) if d
+        )),
+    }
+
+
+def _hms_compatibility_analysis(row: Any) -> Dict[str, Any]:
+    return _hms_compatibility_analysis_from_plans(
+        _quote_daily_schedule_from_row(row), _quote_occupancy_by_day(row)
+    )
+
+
+def _hms_compatibility_failure_message(analysis: Dict[str, Any]) -> str:
+    conflicts = list((analysis or {}).get('conflicts') or [])
+    if not conflicts:
+        return ''
+    pieces = []
+    for item in conflicts[:8]:
+        label = str(item.get('room_label') or item.get('room_id') or '?')
+        nights = ', '.join(item.get('replacement_nights') or [])
+        pieces.append(f'№{label}: замінити на ночах {nights}')
+    return 'HMS-сумісність розміщення не пройдена. ' + '; '.join(pieces)
+
+
+def _assert_hms_compatibility(row: Any) -> Dict[str, Any]:
+    result = _hms_compatibility_analysis(row)
+    if result.get('blocking'):
+        raise ValueError(_hms_compatibility_failure_message(result))
+    return result
+
+
+class _HMSCompatibilityForm:
+    """Small MultiDict-compatible adapter for the existing manual recalculation path."""
+    def __init__(self, values: Dict[str, List[Any]]) -> None:
+        self.values = {str(k): list(v) for k, v in (values or {}).items()}
+
+    def getlist(self, key: str) -> List[Any]:
+        return list(self.values.get(str(key), []))
+
+    def get(self, key: str, default: Any = None) -> Any:
+        values = self.values.get(str(key), [])
+        return values[0] if values else default
+
+
+def _hms_compat_form_for_plan(day_date: str, plan: List[Dict[str, Any]], replace_from: str, replace_to: str) -> _HMSCompatibilityForm:
+    prefix = _manual_day_prefix(day_date)
+    values: Dict[str, List[Any]] = {
+        prefix + '_room_id': [],
+        prefix + '_adults': [],
+        prefix + '_children': [],
+        prefix + '_paid_children': [],
+        prefix + '_extra_beds': [],
+        prefix + '_locked': [],
+        prefix + '_early_checkin': [],
+        prefix + '_late_checkout': [],
+    }
+    found = False
+    for room in plan or []:
+        token = str(room.get('room_id') or '').strip()
+        if token == str(replace_from):
+            token = str(replace_to)
+            found = True
+        values[prefix + '_room_id'].append(token)
+        values[prefix + '_adults'].append(str(_ival(room.get('adults'), 0, minimum=0)))
+        values[prefix + '_children'].append(str(_ival(room.get('children'), 0, minimum=0)))
+        values[prefix + '_paid_children'].append(str(_ival(room.get('paid_children'), 0, minimum=0)))
+        values[prefix + '_extra_beds'].append(str(_ival(room.get('extra_beds'), 0, minimum=0)))
+        values[prefix + '_locked'].append('1' if bool(room.get('manual_locked')) else '0')
+        values[prefix + '_early_checkin'].append('1' if bool(room.get('early_checkin')) else '0')
+        values[prefix + '_late_checkout'].append('1' if bool(room.get('late_checkout')) else '0')
+    if not found:
+        raise ValueError(f'{day_date}: проблемний RoomID {replace_from} вже не знайдено у поточному плані.')
+    return _HMSCompatibilityForm(values)
+
+
+def _hms_compat_pick_candidate(
+    row: Any, source_room_id: str, segment: Dict[str, Any]
+) -> Dict[str, Any]:
+    q = _row_dict(row)
+    dates = [str(x) for x in (segment.get('dates') or []) if str(x)]
+    if not dates:
+        raise ValueError('HMS compatibility autofix отримав порожній сегмент.')
+    occupancy = _quote_occupancy_by_day(row)
+    schedule = _quote_daily_schedule_from_row(row)
+    schedule_index = {str(x.get('date') or ''): i for i, x in enumerate(schedule)}
+    expected_sig = tuple(segment.get('signature') or ())
+    expected_rt = _ival(segment.get('room_type_id'), 0, minimum=0)
+
+    option_maps: List[Dict[str, Dict[str, Any]]] = []
+    source_rows: Dict[str, Dict[str, Any]] = {}
+    for d in dates:
+        plan = [dict(x) for x in (occupancy.get(d) or [])]
+        source = next((x for x in plan if str(x.get('room_id') or '') == str(source_room_id)), None)
+        if not source:
+            raise ValueError(f'{d}: номер №{source_room_id} не знайдено у збереженому плані.')
+        source_rows[d] = source
+        editor = _manual_editor_context_for_quote(row, d)
+        if editor.get('early_checkin_error') and (bool(source.get('early_checkin')) or (d == str(q.get('arrival') or '') and bool(q.get('early_checkin')))):
+            raise ValueError(f'{d}: не вдалося перевірити ранній заїзд перед автовиправленням.')
+        if editor.get('late_checkout_error') and (bool(source.get('late_checkout')) or (str((editor.get('day') or {}).get('next_date') or '') == str(q.get('departure') or '') and bool(q.get('late_checkout')))):
+            raise ValueError(f'{d}: не вдалося перевірити пізній виїзд перед автовиправленням.')
+        used_same_night = {str(x.get('room_id') or '') for x in plan if str(x.get('room_id') or '') != str(source_room_id)}
+        eligible: Dict[str, Dict[str, Any]] = {}
+        for opt in editor.get('room_options') or []:
+            token = str(opt.get('room_id') or opt.get('room_id_token') or '').strip()
+            if not token or token == str(source_room_id) or token in used_same_night:
+                continue
+            if _ival(opt.get('room_type_id'), 0, minimum=0) != expected_rt:
+                continue
+            occupants = _ival(source.get('adults'), 0, minimum=0) + _ival(source.get('children'), 0, minimum=0)
+            if _ival(opt.get('capacity_per_room'), 0, minimum=0) < occupants:
+                continue
+            if _ival(opt.get('extra_capacity'), 0, minimum=0) < _ival(source.get('extra_beds'), 0, minimum=0):
+                continue
+            need_early = bool(source.get('early_checkin')) or (d == str(q.get('arrival') or '') and bool(q.get('early_checkin')))
+            need_late = bool(source.get('late_checkout')) or (
+                str((editor.get('day') or {}).get('next_date') or '') == str(q.get('departure') or '') and bool(q.get('late_checkout'))
+            )
+            if need_early and not bool(opt.get('early_checkin_available')):
+                continue
+            if need_late and not bool(opt.get('late_checkout_available')):
+                continue
+            eligible[token] = dict(opt)
+        option_maps.append(eligible)
+
+    common = set(option_maps[0]) if option_maps else set()
+    for opt_map in option_maps[1:]:
+        common &= set(opt_map)
+    if not common:
+        raise ValueError(
+            f'Для номера №{source_room_id} на {dates[0]} → {segment.get("end_date") or ""} '
+            'немає одного іншого фізичного номера того самого RoomType, який вільний на всіх потрібних ночах.'
+        )
+
+    used_anywhere = {
+        str(room.get('room_id') or '')
+        for plan in occupancy.values() for room in (plan or []) if isinstance(room, dict)
+    }
+
+    def adjacent_safe(token: str) -> bool:
+        first_i = schedule_index.get(dates[0], -1)
+        last_i = schedule_index.get(dates[-1], -1)
+        if first_i > 0:
+            prev_day = schedule[first_i - 1]
+            if str(prev_day.get('next_date') or '') == dates[0]:
+                prev_room = next((x for x in occupancy.get(str(prev_day.get('date') or ''), []) if str(x.get('room_id') or '') == token), None)
+                if prev_room and tuple(_hms_compat_signature(prev_room)) != expected_sig:
+                    return False
+        if 0 <= last_i < len(schedule) - 1:
+            next_day = schedule[last_i + 1]
+            current_day = schedule[last_i]
+            if str(current_day.get('next_date') or '') == str(next_day.get('date') or ''):
+                next_room = next((x for x in occupancy.get(str(next_day.get('date') or ''), []) if str(x.get('room_id') or '') == token), None)
+                if next_room and tuple(_hms_compat_signature(next_room)) != expected_sig:
+                    return False
+        return True
+
+    candidates = [x for x in common if adjacent_safe(x)]
+    if not candidates:
+        raise ValueError(
+            f'Для номера №{source_room_id} є вільні номери, але їх використання створило б новий HMS stay-split на сусідній ночі.'
+        )
+    candidates.sort(key=lambda token: (
+        1 if token in used_anywhere else 0,
+        str((option_maps[0].get(token) or {}).get('room_label') or token),
+        token,
+    ))
+    return dict(option_maps[0][candidates[0]])
+
+
+def _hms_compatibility_autofix(row: Any) -> Dict[str, Any]:
+    """Preview an all-conflict fix using existing live manual-recalculation validation.
+
+    No database write happens here.  Each changed night is fed through the already
+    approved manual room recalculation path, so live availability, capacity, pricing,
+    MinStay and adjacent-night early/late checks are revalidated.  The final result is
+    persisted only by the explicit save action as one new quote revision.
+    """
+    original = _row_dict(row)
+    current_status = str(original.get('hms_booking_status') or '').strip()
+    if current_status in ('booked', 'booking_uncertain'):
+        raise ValueError('Автовиправлення HMS-сумісності недоступне після підтвердженого або невизначеного HMS booking.')
+    before = _hms_compatibility_analysis(original)
+    if not before.get('blocking'):
+        raise ValueError('HMS-сумісність уже OK — автовиправлення не потрібне.')
+
+    working = dict(original)
+    replacements: List[Dict[str, Any]] = []
+    last_calc: Optional[Dict[str, Any]] = None
+    for conflict in before.get('conflicts') or []:
+        source_id = str(conflict.get('room_id') or '')
+        for segment in conflict.get('segments') or []:
+            if not bool(segment.get('needs_replacement')):
+                continue
+            candidate = _hms_compat_pick_candidate(working, source_id, segment)
+            candidate_id = str(candidate.get('room_id') or candidate.get('room_id_token') or '').strip()
+            if not candidate_id:
+                raise ValueError('Автовиправлення обрало номер без RoomID.')
+            before_label = str(conflict.get('room_label') or source_id)
+            after_label = str(candidate.get('room_label') or candidate_id)
+            segment_dates = [str(x) for x in (segment.get('dates') or [])]
+
+            for d in segment_dates:
+                current_plan = [dict(x) for x in (_quote_occupancy_by_day(working).get(d) or [])]
+                form = _hms_compat_form_for_plan(d, current_plan, source_id, candidate_id)
+                calc = _recalculate_quote_with_manual_day(working, d, form, refill=False)
+                quote_data = _quote_data_from_manual_recalculation(working, calc)
+                working.update(quote_data)
+                last_calc = calc
+
+            replacements.append({
+                'from_room_id': source_id,
+                'from_room_label': before_label,
+                'to_room_id': candidate_id,
+                'to_room_label': after_label,
+                'room_type_id': _ival(segment.get('room_type_id'), 0, minimum=0),
+                'category': str(conflict.get('category') or candidate.get('category') or ''),
+                'start_date': str(segment.get('start_date') or ''),
+                'end_date': str(segment.get('end_date') or ''),
+                'dates': segment_dates,
+                'adults': _ival(segment.get('adults'), 0, minimum=0),
+                'children': _ival(segment.get('children'), 0, minimum=0),
+                'paid_children': _ival(segment.get('paid_children'), 0, minimum=0),
+                'extra_beds': _ival(segment.get('extra_beds'), 0, minimum=0),
+            })
+
+    after = _hms_compatibility_analysis(working)
+    if after.get('blocking'):
+        raise ValueError('Автовиправлення не змогло усунути всі HMS compatibility conflicts: ' + _hms_compatibility_failure_message(after))
+    if last_calc is None:
+        raise ValueError('Автовиправлення не сформувало жодної заміни.')
+    pricing = last_calc.get('pricing') or {}
+    quote_data = {k: working.get(k) for k in QUOTE_DATA_COLUMNS}
+    return {
+        'marker': HMS_COMPATIBILITY_AUTOFIX_V2_MARKER,
+        'before': before,
+        'after': after,
+        'replacements': replacements,
+        'quote_data': quote_data,
+        'pricing': pricing,
+        'booking_allowed': bool(pricing.get('booking_allowed', True)),
+        'booking_restrictions': list(pricing.get('booking_restrictions') or []),
+        'warnings': list(last_calc.get('warnings') or []),
+        'commercial_total': working.get('commercial_total'),
+        'currency': str(working.get('currency') or original.get('currency') or 'UAH'),
+    }
