@@ -1,4 +1,4 @@
-name: Build Riverwood HMS Compatibility v2
+name: Build Riverwood HMS Compatibility v2.1
 
 on:
   push:
@@ -26,8 +26,8 @@ jobs:
       - name: Install build dependencies
         run: python -m pip install --upgrade pip jinja2
 
-      - name: Build and test v2
-        run: python build_v2.py
+      - name: Build and test v2.1
+        run: python build_v2_1.py
 
       - name: Verify sidecar sources untouched
         run: git diff --exit-code -- pms_booking_adapter_v1.py pms_sidecar_with_room_quote_v3.py
@@ -35,20 +35,20 @@ jobs:
       - name: Upload verified ZIP artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Riverwood_5SEP_HMS_COMPATIBILITY_AUTOFIX_DASHBOARD_v2
-          path: dist/Riverwood_5SEP_HMS_COMPATIBILITY_AUTOFIX_DASHBOARD_v2.zip
+          name: Riverwood_5SEP_HMS_COMPATIBILITY_AUTOFIX_DASHBOARD_v2_1_INSTALLER_FIX
+          path: dist/Riverwood_5SEP_HMS_COMPATIBILITY_AUTOFIX_DASHBOARD_v2_1_INSTALLER_FIX.zip
           if-no-files-found: error
 
       - name: Publish verified ZIP in release folder
         run: |
           mkdir -p release
-          cp dist/Riverwood_5SEP_HMS_COMPATIBILITY_AUTOFIX_DASHBOARD_v2.zip release/Riverwood_5SEP_HMS_COMPATIBILITY_AUTOFIX_DASHBOARD_v2.zip
+          cp dist/Riverwood_5SEP_HMS_COMPATIBILITY_AUTOFIX_DASHBOARD_v2_1_INSTALLER_FIX.zip release/Riverwood_5SEP_HMS_COMPATIBILITY_AUTOFIX_DASHBOARD_v2_1_INSTALLER_FIX.zip
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add release/Riverwood_5SEP_HMS_COMPATIBILITY_AUTOFIX_DASHBOARD_v2.zip
+          git add release/Riverwood_5SEP_HMS_COMPATIBILITY_AUTOFIX_DASHBOARD_v2_1_INSTALLER_FIX.zip
           if git diff --cached --quiet; then
             echo "Verified ZIP already current"
           else
-            git commit -m "Publish verified HMS compatibility v2 ZIP [skip ci]"
+            git commit -m "Publish verified HMS compatibility v2.1 ZIP [skip ci]"
             git push
           fi
