@@ -58,7 +58,8 @@ $existing = Get-Listener
 if ($existing) {
     $pid8085 = [int]$existing.OwningProcess
     $proc = Get-Process -Id $pid8085 -ErrorAction SilentlyContinue
-    Write-Host ('RECOVERY NOT NEEDED: :8085 already LISTEN PID=' + $pid8085 + ' process=' + $(if($proc){$proc.ProcessName}else{'unknown'}))
+    if ($proc) { $procName = $proc.ProcessName } else { $procName = 'unknown' }
+    Write-Host ('RECOVERY NOT NEEDED: :8085 already LISTEN PID=' + $pid8085 + ' process=' + $procName)
     exit 0
 }
 
@@ -77,7 +78,7 @@ foreach ($f in $files) {
         $launchers += [PSCustomObject]@{ Path=$f.FullName; Extension=$f.Extension.ToLowerInvariant(); Score=$score }
     }
 }
-$launchers = @($launchers | Sort-Object Score -Descending, Path)
+$launchers = @($launchers | Sort-Object -Property @{Expression='Score';Descending=$true}, @{Expression='Path';Descending=$false})
 
 if ($launchers.Count -gt 0) {
     Write-Host ('Exact writer launcher candidates found: ' + $launchers.Count)
