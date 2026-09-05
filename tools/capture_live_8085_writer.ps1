@@ -113,7 +113,8 @@ foreach ($path in $candidates) {
     $ranked += [pscustomobject]@{ Score=$score; Path=$path }
     Add-Report ('  score=' + $score + '  ' + $path)
 }
-$ranked = @($ranked | Sort-Object Score -Descending, Path)
+# Windows PowerShell 5.1 compatible multi-key sort.
+$ranked = @($ranked | Sort-Object -Property @{Expression={$_.Score}; Descending=$true}, @{Expression={$_.Path}; Descending=$false})
 $topScore = $ranked[0].Score
 $top = @($ranked | Where-Object { $_.Score -eq $topScore })
 if ($top.Count -ne 1) {
@@ -142,5 +143,5 @@ foreach ($needle in $needles) {
 }
 
 Add-Report ''
-Add-Report 'CAPTURE OK. Upload LIVE_8085_WRITER.py to the GitHub riverwood-hms-compatibility-v6 branch or attach it to ChatGPT.'
+Add-Report 'CAPTURE OK. Attach LIVE_8085_WRITER.py to ChatGPT or upload it to the GitHub repository.'
 exit 0
