@@ -1,0 +1,36 @@
+name: Inspect Riverwood Early Late Allocation V1
+
+on:
+  push:
+    branches:
+      - riverwood-earlylate-adjacent-day-allocation-v1
+    paths:
+      - accommodation_module.py
+      - tools/inspect_earlylate_allocator.py
+      - .github/workflows/inspect-earlylate-allocation-v1.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect allocator source
+        shell: pwsh
+        run: |
+          py -3 tools/inspect_earlylate_allocator.py
+          Get-Content EARLYLATE_INSPECTION.txt | Select-Object -First 350
+      - name: Publish inspection report
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add EARLYLATE_INSPECTION.txt
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "Publish early late allocator inspection [skip ci]"
+            git push origin HEAD:riverwood-earlylate-adjacent-day-allocation-v1
+          }
