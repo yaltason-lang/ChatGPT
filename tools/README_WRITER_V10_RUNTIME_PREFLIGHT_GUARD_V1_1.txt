@@ -29,3 +29,5 @@ C:\Riverwood_Operations_MVP0_Core_Employees\1_START_DASHBOARD.cmd
 Then open the quote and click "Оновити live preflight" BEFORE booking.
 
 If the writer restart fails after the Operations guard was installed, DO NOT BOOK. Restart Operations anyway: the new guard will block booking until :8085 is confirmed fresh.
+
+Build note: V1.1 intentionally removes the CIM CommandLine dependency that failed on PID 10892.
