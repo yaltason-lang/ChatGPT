@@ -14,28 +14,18 @@ function Add-Report([string]$Text) {
 }
 
 function Is-Historical([string]$Path) {
-    $p = $Path.ToLowerInvariant().Replace('/', '\\')
-    return ($p -like '*\\all versions\\*' -or
-            $p -like '*\\_backups\\*' -or
-            $p -like '*\\backup\\*' -or
-            $p -like '*\\backups\\*' -or
-            $p -like '*\\before_*' -or
-            $p -like '*\\baseline*\\*' -or
-            $p -like '*\\old versions\\*' -or
-            $p -like '*\\old versions*\\*' -or
-            $p -like '*\\.git\\*' -or
-            $p -like '*\\dist\\*' -or
-            $p -like '*\\payload\\*')
-}
-
-function Add-Candidate([System.Collections.Generic.List[string]]$List, [string]$Path) {
-    if ([string]::IsNullOrWhiteSpace($Path)) { return }
-    try {
-        $resolved = (Resolve-Path $Path -ErrorAction Stop).Path
-        if ((Test-Path $resolved -PathType Leaf) -and -not (Is-Historical $resolved)) {
-            if (-not $List.Contains($resolved)) { $List.Add($resolved) }
-        }
-    } catch {}
+    $p = $Path.ToLowerInvariant().Replace('/', '\')
+    if ($p -like '*\all versions\*') { return $true }
+    if ($p -like '*\old versions\*') { return $true }
+    if ($p -like '*\_backups\*') { return $true }
+    if ($p -like '*\backups\*') { return $true }
+    if ($p -like '*\backup\*') { return $true }
+    if ($p -like '*\before_*') { return $true }
+    if ($p -like '*\baseline*\*') { return $true }
+    if ($p -like '*\.git\*') { return $true }
+    if ($p -like '*\dist\*') { return $true }
+    if ($p -like '*\payload\*') { return $true }
+    return $false
 }
 
 Add-Report 'Riverwood LIVE :8080 Operations capture'
@@ -49,12 +39,12 @@ if ($listeners.Count -eq 0) {
     Add-Report 'FAILED: no LISTEN process found on TCP :8080.'
     exit 2
 }
-$pids = @($listeners | Select-Object -ExpandProperty OwningProcess -Unique)
-if ($pids.Count -ne 1) {
-    Add-Report ('FAILED: expected exactly one owning PID for :8080, got: ' + ($pids -join ', '))
+$owners = @($listeners | Select-Object -ExpandProperty OwningProcess -Unique)
+if ($owners.Count -ne 1) {
+    Add-Report ('FAILED: expected exactly one owning PID for :8080, got: ' + ($owners -join ', '))
     exit 3
 }
-$opsPid = [int]$pids[0]
+$opsPid = [int]$owners[0]
 $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$opsPid"
 if (-not $proc) {
     Add-Report ('FAILED: cannot read Win32_Process for PID ' + $opsPid)
@@ -67,22 +57,30 @@ Add-Report ('CommandLine: ' + $proc.CommandLine)
 Add-Report ''
 
 $cmd = [string]$proc.CommandLine
-$entryCandidates = New-Object System.Collections.Generic.List[string]
+$entryCandidates = @()
 $matches = [regex]::Matches($cmd, '(?i)(?:"([^"]+\.py)"|([^\s"]+\.py))')
 foreach ($m in $matches) {
-    $raw = if ($m.Groups[1].Success) { $m.Groups[1].Value } else { $m.Groups[2].Value }
+    if ($m.Groups[1].Success) { $raw = $m.Groups[1].Value } else { $raw = $m.Groups[2].Value }
     if ([string]::IsNullOrWhiteSpace($raw)) { continue }
-    Add-Candidate $entryCandidates $raw
+    $tries = @($raw)
     if (-not [System.IO.Path]::IsPathRooted($raw)) {
-        Add-Candidate $entryCandidates (Join-Path (Get-Location).Path $raw)
-        Add-Candidate $entryCandidates (Join-Path 'C:\Riverwood_Operations_MVP0_Core_Employees' $raw)
-        Add-Candidate $entryCandidates (Join-Path 'C:\riverwood_revenue_bot' $raw)
+        $tries += (Join-Path ((Get-Location).Path) $raw)
+        $tries += (Join-Path 'C:\Riverwood_Operations_MVP0_Core_Employees' $raw)
+        $tries += (Join-Path 'C:\riverwood_revenue_bot' $raw)
+    }
+    foreach ($t in $tries) {
+        try {
+            $resolved = (Resolve-Path $t -ErrorAction Stop).Path
+            if ((Test-Path $resolved -PathType Leaf) -and -not (Is-Historical $resolved)) {
+                if ($entryCandidates -notcontains $resolved) { $entryCandidates += $resolved }
+            }
+        } catch {}
     }
 }
 
-$entry = $null
+$entry = ''
 if ($entryCandidates.Count -gt 0) {
-    $entry = $entryCandidates[0]
+    $entry = [string]$entryCandidates[0]
     Copy-Item -LiteralPath $entry -Destination $TargetEntry -Force
     Add-Report ('ENTRYPOINT CANDIDATE: ' + $entry)
     Add-Report ('ENTRYPOINT SHA256: ' + ((Get-FileHash -LiteralPath $TargetEntry -Algorithm SHA256).Hash.ToLowerInvariant()))
@@ -91,57 +89,56 @@ if ($entryCandidates.Count -gt 0) {
 }
 Add-Report ''
 
-$rootCandidates = New-Object System.Collections.Generic.List[string]
-if ($entry) {
+$roots = @()
+if ($entry -ne '') {
     try {
-        $p = Split-Path -Parent $entry
-        if ($p -and -not $rootCandidates.Contains($p)) { $rootCandidates.Add($p) }
-        $pp = Split-Path -Parent $p
-        if ($pp -and -not $rootCandidates.Contains($pp)) { $rootCandidates.Add($pp) }
+        $entryDir = Split-Path -Parent $entry
+        if ($entryDir -and $roots -notcontains $entryDir) { $roots += $entryDir }
+        $entryParent = Split-Path -Parent $entryDir
+        if ($entryParent -and $roots -notcontains $entryParent) { $roots += $entryParent }
     } catch {}
 }
 foreach ($known in @('C:\Riverwood_Operations_MVP0_Core_Employees','C:\riverwood_revenue_bot')) {
-    if ((Test-Path $known) -and -not $rootCandidates.Contains($known)) { $rootCandidates.Add($known) }
+    if ((Test-Path $known) -and $roots -notcontains $known) { $roots += $known }
 }
 
 $pairs = @()
-foreach ($root in $rootCandidates) {
+foreach ($root in $roots) {
     if (-not (Test-Path $root)) { continue }
-    $modules = @(Get-ChildItem -Path $root -Filter 'accommodation_module.py' -File -Recurse -ErrorAction SilentlyContinue |
-        Where-Object { -not (Is-Historical $_.FullName) })
-    foreach ($m in $modules) {
-        $module = $m.FullName
+    $modules = @(Get-ChildItem -Path $root -Filter 'accommodation_module.py' -File -Recurse -ErrorAction SilentlyContinue | Where-Object { -not (Is-Historical $_.FullName) })
+    foreach ($mf in $modules) {
+        $module = $mf.FullName
         $dir = Split-Path -Parent $module
-        $templates = @(
-            (Join-Path $dir 'templates\accommodation_quote_detail.html'),
-            (Join-Path $dir 'accommodation_quote_detail.html')
-        )
-        $template = $null
-        foreach ($t in $templates) {
-            if ((Test-Path $t -PathType Leaf) -and -not (Is-Historical $t)) { $template = (Resolve-Path $t).Path; break }
-        }
-        if (-not $template) { continue }
+        $template = ''
+        $t1 = Join-Path $dir 'templates\accommodation_quote_detail.html'
+        $t2 = Join-Path $dir 'accommodation_quote_detail.html'
+        if ((Test-Path $t1 -PathType Leaf) -and -not (Is-Historical $t1)) { $template = (Resolve-Path $t1).Path }
+        elseif ((Test-Path $t2 -PathType Leaf) -and -not (Is-Historical $t2)) { $template = (Resolve-Path $t2).Path }
+        if ($template -eq '') { continue }
         try { $text = [System.IO.File]::ReadAllText($module) } catch { continue }
         $score = 0
         if ($text.Contains('def _hms_booking_state')) { $score += 100 }
         if ($text.Contains('def _hms_booking_payload')) { $score += 100 }
         if ($text.Contains('hms_booking_preflight')) { $score += 30 }
-        if ($text.Contains('HMS-сумісність розміщення') -or $text.Contains('HMS_COMPAT')) { $score += 20 }
-        if ($entry -and ((Split-Path -Parent $entry) -eq $dir)) { $score += 1000 }
-        if ($entry -and $module.StartsWith((Split-Path -Parent $entry), [System.StringComparison]::OrdinalIgnoreCase)) { $score += 500 }
-        if ($cmd -and $cmd.ToLowerInvariant().Contains($dir.ToLowerInvariant())) { $score += 300 }
-        $pairs += [pscustomobject]@{ Score=$score; Module=$module; Template=$template; Root=$dir }
+        if ($text.Contains('HMS_COMPAT')) { $score += 20 }
+        if ($entry -ne '') {
+            $entryDir2 = Split-Path -Parent $entry
+            if ($dir -eq $entryDir2) { $score += 1000 }
+            if ($module.ToLowerInvariant().StartsWith($entryDir2.ToLowerInvariant())) { $score += 500 }
+            if ($cmd.ToLowerInvariant().Contains($dir.ToLowerInvariant())) { $score += 300 }
+        }
+        $pairs += [pscustomobject]@{ Score=$score; Module=$module; Template=$template }
     }
 }
 
-if (@($pairs).Count -eq 0) {
+if ($pairs.Count -eq 0) {
     Add-Report 'FAILED: no non-archive accommodation_module.py + template pair found near live :8080 process.'
     exit 5
 }
 
-# De-duplicate same module discovered through multiple roots, keeping highest score.
 $dedup = @()
-foreach ($g in ($pairs | Group-Object Module)) {
+$groups = @($pairs | Group-Object Module)
+foreach ($g in $groups) {
     $best = @($g.Group | Sort-Object Score -Descending)[0]
     $dedup += $best
 }
