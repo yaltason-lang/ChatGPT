@@ -44,7 +44,7 @@ function Show-TextFile([string]$Path, [string]$Label) {
 }
 
 Write-Host 'Riverwood HMS Writer :8085 native-launcher recovery V1'
-Write-Host 'NO Operations patch. NO :8082 changes.'
+Write-Host 'NO Operations patch. Other services are not touched.'
 Write-Host ('Writer: ' + $Writer)
 
 if (-not (Test-Path -LiteralPath $Writer -PathType Leaf)) { throw ('Writer not found: ' + $Writer) }
