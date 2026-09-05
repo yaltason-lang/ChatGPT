@@ -1,0 +1,2 @@
+Riverwood HMS compatibility minimal repair v5
+Regression target: production screenshot failure with 7-row signature group and partial live options.
