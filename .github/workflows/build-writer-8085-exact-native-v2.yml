@@ -33,7 +33,8 @@ jobs:
         run: |
           $ps = Get-Content 'tools/recover_writer_8085_exact_native_v2.ps1' -Raw
           $bat = Get-Content 'tools/RECOVER_WRITER_8085_EXACT_NATIVE_V2.bat' -Raw
-          if ($ps -notmatch [regex]::Escape('C:\riverwood_revenue_bot\START_DASHBOARD.bat')) { throw 'Exact native launcher missing' }
+          if ($ps -notmatch "START_DASHBOARD\.bat") { throw 'Exact native launcher missing' }
+          if ($ps -notmatch "riverwood_revenue_bot") { throw 'Revenue-bot root missing' }
           if ($ps -notmatch '23462d24847e677e6fedaa1bf4cbe863899341d536122a3140a7408abb5926ac') { throw 'Exact writer SHA gate missing' }
           if ($ps -notmatch 'RIVERWOOD_HMS_WRITER_V10_TECHNICAL_CARD_BUDGET_RESTORE_GATE') { throw 'Writer marker gate missing' }
           if ($ps -notmatch 'Get-NetTCPConnection -LocalPort 8085') { throw '8085 listener check missing' }
